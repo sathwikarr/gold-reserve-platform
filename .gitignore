@@ -25,3 +25,5 @@ data/curated/*
 
 # VS Code
 .vscode/
+.virtual_documents/
+anaconda_projects/
