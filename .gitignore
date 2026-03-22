@@ -1,0 +1,27 @@
+# Virtual environment
+.venv/
+
+# Environment variables
+.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data (raw files stay local, not in git)
+data/raw/*
+data/staging/*
+data/curated/*
+!data/raw/.gitkeep
+!data/staging/.gitkeep
+!data/curated/.gitkeep
+
+# macOS
+.DS_Store
+
+# VS Code
+.vscode/
