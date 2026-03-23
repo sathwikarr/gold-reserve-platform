@@ -26,4 +26,6 @@ docs/         # Architecture and documentation
 ```
 
 ## Stack
-Python · pandas · PostgreSQL · Jupyter · Tableau
+Python · pandas · PostgreSQL · Jupyter · Tableau 
+
+**Dashboard**: [Live Tableau Dashboard](https://public.tableau.com/app/profile/sathwik.arroju3800/viz/Book1_17742304990500/Dashboard1)
