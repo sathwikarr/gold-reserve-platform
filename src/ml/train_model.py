@@ -303,7 +303,7 @@ def plot_roc_curves(results):
 
 def plot_confusion_matrices(results):
     fig, axes = plt.subplots(1, 2, figsize=(10, 4))
-    fig.suptitle("Confusion Matrices — Test Set (2020–2024)", fontsize=13, fontweight="bold")
+    fig.suptitle("Confusion Matrices — Test Set (2020–latest)", fontsize=13, fontweight="bold")
     for ax, r in zip(axes, results):
         cm = np.array([[r["tn"], r["fp"]], [r["fn"], r["tp"]]])
         im = ax.imshow(cm, cmap="Blues")

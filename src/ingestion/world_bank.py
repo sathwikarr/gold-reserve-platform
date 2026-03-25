@@ -24,7 +24,7 @@ INDICATORS = {
     "total_reserves_excl_gold":  "FI.RES.XGLD.CD",
 }
 START_YEAR = 2000
-END_YEAR   = 2024
+END_YEAR   = 2025
 
 
 def fetch_indicator(name: str, code: str) -> pd.DataFrame:

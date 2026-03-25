@@ -67,9 +67,10 @@ def run():
 
     df = pd.read_csv(CURATED_DIR / "master_panel_nlp.csv")
 
-    # Use 2023 data (most recent complete year)
-    latest = df[df["year"] == 2023].copy()
-    log.info(f"Countries with 2023 data: {len(latest)}")
+    # Use the most recent year with sufficient data
+    max_year = int(df["year"].max())
+    latest = df[df["year"] == max_year].copy()
+    log.info(f"Using latest year: {max_year} | Countries: {len(latest)}")
 
     # Drop rows with missing key features
     required = list(WEIGHTS.keys()) + ["sanctions_score", "gold_share_pct",
@@ -129,7 +130,8 @@ def run():
     top10 = ranked.head(10)
 
     log.info("\n" + "=" * 60)
-    log.info("TOP 10 PREDICTED GOLD ACCUMULATORS — 2025")
+    predict_year = max_year + 1
+    log.info(f"TOP 10 PREDICTED GOLD ACCUMULATORS — {predict_year}")
     log.info("=" * 60)
     for rank, row in top10.iterrows():
         log.info(
@@ -166,7 +168,7 @@ def run():
 
     ax.set_xlabel("Gold Accumulation Score (0–100)", fontsize=11)
     ax.set_title(
-        "Top 10 Countries Predicted to Increase Gold Reserves in 2025\n"
+        f"Top 10 Countries Predicted to Increase Gold Reserves in {predict_year}\n"
         "Scoring: Gold Momentum (40%) + USD Decline (27%) + USD Drawdown (18%) + Global Trend (10%) + Geo Risk (5%) + Sanctions Bonus",
         fontsize=10, fontweight="bold"
     )

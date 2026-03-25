@@ -1,12 +1,12 @@
 """
 Gold Accumulation Predictions — V4 Machine Learning Model
 Uses trained model scores to identify the top 10 countries most likely
-to increase their gold reserves in 2025.
+to increase their gold reserves in the NEXT year.
 
 Prediction methodology:
-  The most recent year available per country is 2024. The ensemble
+  The most recent year available per country is used. The ensemble
   probability score from that year represents the model's estimate of
-  whether that country will accumulate gold in 2025.
+  whether that country will accumulate gold the following year.
 
   Countries are ranked by ensemble_prob (average of logistic regression
   and gradient boosting probabilities).
@@ -59,8 +59,9 @@ def plot_top10(top10: pd.DataFrame):
         ax.text(bar.get_width() + 0.5, bar.get_y() + bar.get_height()/2,
                 f"{prob*100:.1f}%", va="center", fontsize=10, color="#333333")
 
-    ax.set_xlabel("Probability of Gold Accumulation in 2025 (%)", fontsize=11)
-    ax.set_title("Top 10 Countries Predicted to Increase Gold Reserves in 2025\n"
+    predict_year = int(top10["year"].max()) + 1
+    ax.set_xlabel(f"Probability of Gold Accumulation in {predict_year} (%)", fontsize=11)
+    ax.set_title(f"Top 10 Countries Predicted to Increase Gold Reserves in {predict_year}\n"
                  "(Ensemble Model: Logistic Regression + Gradient Boosting)",
                  fontsize=12, fontweight="bold")
     ax.set_xlim(0, 105)
@@ -119,8 +120,9 @@ def run():
     )
     top10.index += 1  # rank 1–10
 
+    predict_year = int(latest["year"].max()) + 1
     log.info("\n" + "=" * 60)
-    log.info("TOP 10 PREDICTED GOLD ACCUMULATORS — 2025")
+    log.info(f"TOP 10 PREDICTED GOLD ACCUMULATORS — {predict_year}")
     log.info("=" * 60)
 
     for rank, row in top10.iterrows():

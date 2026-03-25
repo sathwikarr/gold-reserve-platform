@@ -48,11 +48,12 @@ page = st.sidebar.radio(
 )
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("""
+max_yr = int(df["year"].max())
+st.sidebar.markdown(f"""
 **Project:** Central Bank Gold Accumulation vs USD Power & Geopolitical Risk Platform
 **Data:** World Bank · IMF COFER · OFAC · UN Voting · GDELT
 **Model:** Logistic Regression + Gradient Boosting (from scratch)
-**Period:** 2000–2024 · 178 Countries
+**Period:** 2000–{max_yr} · {df['country'].nunique()} Countries
 """)
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -67,17 +68,18 @@ if page == "🌍 Overview":
     to analyze and predict country-level gold accumulation behavior.
     """)
 
-    # KPI cards
-    latest = df[df.year == 2023]
+    # KPI cards — use the latest year with data
+    latest_year = int(df["year"].max())
+    latest = df[df.year == latest_year]
     col1, col2, col3, col4 = st.columns(4)
 
     world_gold_bn = latest["world_gold_value_bn"].iloc[0] if len(latest) > 0 else 0
     accumulators = latest["is_accumulating"].sum()
-    usd_drawdown = df[df.year == 2023]["usd_share_drawdown_pct"].mean()
+    usd_drawdown = latest["usd_share_drawdown_pct"].mean()
     sanctioned = (latest["sanctions_score"] >= 1).sum()
 
-    col1.metric("🌎 World Gold Reserves", f"${world_gold_bn/1000:.1f}T", "2023")
-    col2.metric("📈 Countries Accumulating", f"{int(accumulators)}", "in 2023")
+    col1.metric("🌎 World Gold Reserves", f"${world_gold_bn/1000:.1f}T", f"{latest_year}")
+    col2.metric("📈 Countries Accumulating", f"{int(accumulators)}", f"in {latest_year}")
     col3.metric("💵 Avg USD Drawdown", f"{usd_drawdown:.1f}%", "from peak")
     col4.metric("⚠️ Sanctioned Accumulators", f"{int(sanctioned)}", "countries")
 
@@ -474,10 +476,12 @@ elif page == "📰 Sentiment":
 # PAGE 5 — ML PREDICTIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 elif page == "🤖 ML Predictions":
-    st.title("🤖 ML Predictions: Top Gold Accumulators 2025")
-    st.markdown("""
+    max_data_year = int(df["year"].max())
+    predict_year = max_data_year + 1
+    st.title(f"🤖 ML Predictions: Top Gold Accumulators {predict_year}")
+    st.markdown(f"""
     An **interpretable scoring model** combining gradient boosting feature importance weights
-    ranks countries by their likelihood of increasing gold reserves in 2025.
+    ranks countries by their likelihood of increasing gold reserves in {predict_year}.
 
     **Feature weights (from GB importance):**
     - Gold YoY momentum: **40%**
@@ -512,7 +516,7 @@ elif page == "🤖 ML Predictions":
             textposition="outside"
         ))
         fig.update_layout(
-            title="Top 10 Countries Predicted to Increase Gold Reserves in 2025",
+            title=f"Top 10 Countries Predicted to Increase Gold Reserves in {predict_year}",
             xaxis_title="Gold Accumulation Score (0–100)",
             xaxis=dict(range=[0, 115]),
             plot_bgcolor="#0E1117", paper_bgcolor="#0E1117",

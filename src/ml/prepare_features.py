@@ -10,7 +10,7 @@ This is constructed by shifting is_accumulating forward by 1 year per country,
 so the model learns: given THIS year's features, predict NEXT year's behaviour.
 
 Feature sets:
-  Core (always available, 2001–2024):
+  Core (always available, 2001–latest):
     gold_share_pct, accumulation_streak, gold_yoy_change_pct,
     gold_share_yoy_change, gold_share_vs_world, country_share_of_world_gold_pct,
     usd_share_drawdown_pct, usd_share_yoy_change, accumulating_during_usd_decline,
@@ -21,7 +21,7 @@ Feature sets:
 
 Train/test split: time-based
   Train: 2001–2019
-  Test:  2020–2024  (post-COVID, sanctions acceleration era)
+  Test:  2020–latest  (post-COVID, sanctions acceleration era)
 
 Input:  data/curated/master_panel_nlp.csv
 Output: data/curated/ml_features.csv  (feature matrix + target, clean rows only)
@@ -85,9 +85,12 @@ def run():
     df = pd.read_csv(CURATED_DIR / "master_panel_nlp.csv")
     log.info(f"Panel loaded: {df.shape}")
 
-    # Fill global USD sentiment with median (these are year-level, should be complete 2000-2024)
+    # Fill global USD sentiment with median (these are year-level)
     for col in ["global_usd_negative_pct", "global_usd_positive_pct"]:
         df[col] = df[col].fillna(df[col].median())
+
+    max_year = int(df["year"].max())
+    log.info(f"Data covers years {int(df['year'].min())}–{max_year}")
 
     # Build next-year target
     df = build_target(df)
@@ -108,7 +111,7 @@ def run():
     train = df_ml[df_ml["year"] <= 2019]
     test  = df_ml[df_ml["year"] >= 2020]
     log.info(f"Train set: {len(train):,} rows (2001–2019)")
-    log.info(f"Test set : {len(test):,} rows (2020–2024)")
+    log.info(f"Test set : {len(test):,} rows (2020–{max_year})")
 
     # Save
     out_path = CURATED_DIR / "ml_features.csv"
