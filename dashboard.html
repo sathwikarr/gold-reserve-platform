@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Gold Reserve Intelligence Platform</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --gold: #D4AF37;
+    --gold-light: #F0D060;
+    --dark: #0A0E1A;
+    --card: #111827;
+    --card2: #1A2235;
+    --text: #E8E8E8;
+    --muted: #8899AA;
+    --red: #C0392B;
+    --orange: #E67E22;
+    --blue: #2E6FD9;
+    --green: #27AE60;
+    --border: #2A3548;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--dark);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  /* NAV */
+  nav {
+    background: linear-gradient(135deg, #0A0E1A 0%, #111827 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+  }
+  .nav-brand {
+    display: flex; align-items: center; gap: 0.75rem;
+    font-size: 1.1rem; font-weight: 700; color: var(--gold);
+  }
+  .nav-brand span { font-size: 1.4rem; }
+  .nav-links { display: flex; gap: 0.5rem; }
+  .nav-links a {
+    color: var(--muted); text-decoration: none;
+    padding: 0.5rem 0.9rem; border-radius: 6px;
+    font-size: 0.85rem; font-weight: 500;
+    transition: all 0.2s;
+  }
+  .nav-links a:hover, .nav-links a.active {
+    color: var(--gold); background: rgba(212,175,55,0.12);
+  }
+
+  /* HERO */
+  .hero {
+    background: linear-gradient(135deg, #0A0E1A 0%, #0F1C2E 50%, #1A0A0A 100%);
+    padding: 4rem 2rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .hero h1 {
+    font-size: clamp(1.6rem, 4vw, 2.8rem);
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 1rem;
+  }
+  .hero p {
+    color: var(--muted); max-width: 700px; margin: 0 auto 2rem;
+    font-size: 1.05rem;
+  }
+  .hero-tags { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.5rem; }
+  .tag {
+    background: rgba(212,175,55,0.1);
+    border: 1px solid rgba(212,175,55,0.3);
+    color: var(--gold-light);
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+
+  /* SECTIONS */
+  section {
+    padding: 3rem 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 0.4rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .section-desc {
+    color: var(--muted); margin-bottom: 1.8rem;
+    font-size: 0.95rem; max-width: 760px;
+  }
+  .section-divider {
+    border: none; border-top: 1px solid var(--border);
+    margin: 0;
+  }
+
+  /* KPI GRID */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .kpi-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.2rem 1.4rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--gold), transparent);
+  }
+  .kpi-label { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .kpi-value { font-size: 2rem; font-weight: 800; color: var(--gold); line-height: 1.1; margin: 0.3rem 0; }
+  .kpi-sub { font-size: 0.8rem; color: var(--green); }
+
+  /* CHART GRID */
+  .chart-grid {
+    display: grid;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .chart-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+  .chart-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 900px) {
+    .chart-grid.cols-2, .chart-grid.cols-3 { grid-template-columns: 1fr; }
+    .nav-links a { font-size: 0.75rem; padding: 0.4rem 0.6rem; }
+  }
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.4rem;
+  }
+  .chart-card.full { grid-column: 1 / -1; }
+  .chart-title {
+    font-size: 0.95rem; font-weight: 600; color: var(--text);
+    margin-bottom: 0.3rem;
+  }
+  .chart-subtitle {
+    font-size: 0.78rem; color: var(--muted);
+    margin-bottom: 1rem;
+  }
+  .chart-wrap { position: relative; height: 280px; }
+  .chart-wrap.tall { height: 380px; }
+  .chart-wrap.short { height: 220px; }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; border-radius: 10px; }
+  table {
+    width: 100%; border-collapse: collapse;
+    font-size: 0.87rem;
+  }
+  thead th {
+    background: var(--card2); color: var(--muted);
+    padding: 0.75rem 1rem; text-align: left;
+    font-size: 0.75rem; text-transform: uppercase;
+    letter-spacing: 0.5px; border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tbody tr { border-bottom: 1px solid rgba(42,53,72,0.5); transition: background 0.15s; }
+  tbody tr:hover { background: var(--card2); }
+  tbody td { padding: 0.7rem 1rem; color: var(--text); }
+  .rank { color: var(--gold); font-weight: 700; }
+  .badge {
+    display: inline-block; padding: 0.15rem 0.55rem;
+    border-radius: 10px; font-size: 0.72rem; font-weight: 600;
+  }
+  .badge-red { background: rgba(192,57,43,0.2); color: #FF6B6B; border: 1px solid rgba(192,57,43,0.4); }
+  .badge-orange { background: rgba(230,126,34,0.2); color: #FFA040; border: 1px solid rgba(230,126,34,0.4); }
+  .badge-blue { background: rgba(46,111,217,0.2); color: #6FAAFF; border: 1px solid rgba(46,111,217,0.4); }
+  .badge-green { background: rgba(39,174,96,0.2); color: #55EE88; border: 1px solid rgba(39,174,96,0.4); }
+  .badge-gray { background: rgba(100,100,100,0.2); color: #AAAAAA; border: 1px solid rgba(100,100,100,0.4); }
+
+  /* LEGEND */
+  .legend-row { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 0.8rem; }
+  .legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--muted); }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+
+  /* FOOTER */
+  footer {
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    padding: 1.5rem 2rem;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.82rem;
+  }
+  footer strong { color: var(--gold); }
+
+  /* TABS */
+  .tab-bar { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; }
+  .tab-btn {
+    padding: 0.6rem 1.2rem; border: none; background: none;
+    color: var(--muted); cursor: pointer; border-radius: 6px 6px 0 0;
+    font-size: 0.87rem; font-weight: 500; transition: all 0.2s;
+  }
+  .tab-btn.active {
+    color: var(--gold); background: rgba(212,175,55,0.1);
+    border-bottom: 2px solid var(--gold);
+  }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* INSIGHT BOXES */
+  .insight-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-top: 1rem; }
+  .insight-box {
+    background: var(--card2); border: 1px solid var(--border);
+    border-left: 3px solid var(--gold);
+    border-radius: 8px; padding: 1rem 1.2rem;
+  }
+  .insight-box.red { border-left-color: var(--red); }
+  .insight-box.orange { border-left-color: var(--orange); }
+  .insight-box.green { border-left-color: var(--green); }
+  .insight-title { font-size: 0.82rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 0.4rem; }
+  .insight-value { font-size: 1.4rem; font-weight: 700; color: var(--text); }
+  .insight-desc { font-size: 0.82rem; color: var(--muted); margin-top: 0.3rem; }
+
+  /* COUNTRY SELECTOR */
+  .controls { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; align-items: center; }
+  select {
+    background: var(--card2); border: 1px solid var(--border);
+    color: var(--text); padding: 0.5rem 1rem;
+    border-radius: 8px; font-size: 0.87rem; cursor: pointer;
+    min-width: 200px;
+  }
+  select:focus { outline: 1px solid var(--gold); }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand"><span>🏅</span> Gold Reserve Intelligence</div>
+  <div class="nav-links">
+    <a href="#overview" class="active">Overview</a>
+    <a href="#gold-usd">Gold vs USD</a>
+    <a href="#geopolitics">Geopolitics</a>
+    <a href="#predictions">ML Predictions</a>
+    <a href="#explorer">Explorer</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <h1>Central Bank Gold Accumulation<br>vs USD Power &amp; Geopolitical Risk</h1>
+  <p>An end-to-end analytics platform integrating 178 countries, 25 years of central bank data,
+  sanctions exposure, NLP-derived narratives, and machine learning predictions.</p>
+  <div class="hero-tags">
+    <span class="tag">🌍 178 Countries</span>
+    <span class="tag">📅 2000–2024</span>
+    <span class="tag">🏦 World Bank · IMF · OFAC · UN</span>
+    <span class="tag">🤖 LR + Gradient Boosting</span>
+    <span class="tag">📰 GDELT NLP</span>
+    <span class="tag">⚗️ 4,283 Observations</span>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ═══ SECTION 1: OVERVIEW ═══ -->
+<section id="overview">
+  <div class="section-title">🌍 Overview</div>
+  <p class="section-desc">Global gold accumulation patterns, key statistics, and top gold holders across 178 central banks from 2000 to 2024.</p>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">World Gold Reserves (2024)</div>
+      <div class="kpi-value">$2.47T</div>
+      <div class="kpi-sub">↑ 10× since 2000</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Countries Accumulating (2024)</div>
+      <div class="kpi-value">95</div>
+      <div class="kpi-sub">of 135 in panel (70%)</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">USD Share of Reserves (2024)</div>
+      <div class="kpi-value">57.1%</div>
+      <div class="kpi-sub">↓ from 71% in 2001</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">World Gold Share (2024)</div>
+      <div class="kpi-value">17.4%</div>
+      <div class="kpi-sub">↑ from 9.5% in 2006</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Countries in Dataset</div>
+      <div class="kpi-value">178</div>
+      <div class="kpi-sub">4,283 country-year rows</div>
+    </div>
+  </div>
+
+  <div class="chart-grid cols-2">
+    <!-- Top 10 Gold Holders -->
+    <div class="chart-card">
+      <div class="chart-title">Top 10 Gold Holders by Value (2023)</div>
+      <div class="chart-subtitle">Central bank gold holdings in USD billions</div>
+      <div class="chart-wrap">
+        <canvas id="holdersChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Accumulation Rate -->
+    <div class="chart-card">
+      <div class="chart-title">% of Countries Accumulating Gold by Year</div>
+      <div class="chart-subtitle">Share of central banks increasing gold reserves</div>
+      <div class="chart-wrap">
+        <canvas id="accumChart"></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ═══ SECTION 2: GOLD vs USD ═══ -->
+<section id="gold-usd">
+  <div class="section-title">📉 Gold vs USD Dominance</div>
+  <p class="section-desc">As the US dollar loses its share of global reserves, central banks diversify into gold. This section traces 25 years of that relationship.</p>
+
+  <div class="chart-grid">
+    <div class="chart-card full">
+      <div class="chart-title">USD Share of Global Reserves vs World Gold Share (2000–2024)</div>
+      <div class="chart-subtitle">Inverse relationship between dollar dominance and gold accumulation</div>
+      <div class="chart-wrap tall">
+        <canvas id="usdGoldChart"></canvas>
+      </div>
+      <div class="legend-row">
+        <div class="legend-item"><div class="legend-dot" style="background:#4A90D9"></div>USD Share of Reserves (%)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#D4AF37"></div>World Gold Share of Reserves (%)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="insight-grid">
+    <div class="insight-box">
+      <div class="insight-title">USD Decline Since Peak</div>
+      <div class="insight-value">−14 percentage points</div>
+      <div class="insight-desc">From ~71% (2001) to ~57% (2024) — structural de-dollarization trend</div>
+    </div>
+    <div class="insight-box green">
+      <div class="insight-title">Gold Share Rise</div>
+      <div class="insight-value">+8 percentage points</div>
+      <div class="insight-desc">World gold share rose from 9.5% (2006) to 17.4% (2024)</div>
+    </div>
+    <div class="insight-box orange">
+      <div class="insight-title">Correlation</div>
+      <div class="insight-value">Strong Inverse</div>
+      <div class="insight-desc">Periods of USD decline align with gold accumulation waves (2009–2012, 2019–2024)</div>
+    </div>
+  </div>
+
+  <!-- Country Trend Tab -->
+  <div style="margin-top:2rem">
+    <div class="chart-card">
+      <div class="chart-title">Gold Share Trends — Key Accumulators</div>
+      <div class="chart-subtitle">% of total reserves held in gold (select countries)</div>
+      <div class="controls">
+        <select id="countrySelect" multiple size="4" style="min-height:80px">
+          <option value="China" selected>China</option>
+          <option value="India" selected>India</option>
+          <option value="Poland" selected>Poland</option>
+          <option value="Czechia">Czechia</option>
+          <option value="Singapore">Singapore</option>
+          <option value="Turkiye" selected>Turkiye</option>
+          <option value="Russian Federation">Russia</option>
+          <option value="United States">United States</option>
+        </select>
+        <span style="color:var(--muted); font-size:0.82rem">Hold Ctrl/Cmd to select multiple</span>
+      </div>
+      <div class="chart-wrap tall">
+        <canvas id="countryTrendChart"></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ═══ SECTION 3: GEOPOLITICS ═══ -->
+<section id="geopolitics">
+  <div class="section-title">🌐 Geopolitical Risk &amp; Gold</div>
+  <p class="section-desc">Countries with higher sanctions exposure, geopolitical risk, and divergence from US foreign policy show systematically higher gold accumulation.</p>
+
+  <div class="chart-grid cols-2">
+    <div class="chart-card">
+      <div class="chart-title">Sanctions Exposure vs Avg Gold Share (2023)</div>
+      <div class="chart-subtitle">Heavily sanctioned countries hold more gold</div>
+      <div class="chart-wrap">
+        <canvas id="sanctionsChart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Geopolitical Bloc vs Avg Accumulation Streak</div>
+      <div class="chart-subtitle">US-divergent countries show longer accumulation streaks</div>
+      <div class="chart-wrap">
+        <canvas id="blocChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="insight-grid">
+    <div class="insight-box red">
+      <div class="insight-title">Heavily Sanctioned Gold Share</div>
+      <div class="insight-value">18.8%</div>
+      <div class="insight-desc">vs 10.3% for non-sanctioned — an 83% premium</div>
+    </div>
+    <div class="insight-box orange">
+      <div class="insight-title">US-Divergent Bloc Avg Streak</div>
+      <div class="insight-value">1.17 years</div>
+      <div class="insight-desc">vs 1.03 for US-allied — divergent countries are more persistent accumulators</div>
+    </div>
+    <div class="insight-box">
+      <div class="insight-title">Key Structural Driver</div>
+      <div class="insight-value">Sanctions Risk</div>
+      <div class="insight-desc">Countries facing or anticipating sanctions use gold to reduce USD-denominated reserve exposure</div>
+    </div>
+  </div>
+
+  <!-- Geopolitics table -->
+  <div style="margin-top:1.5rem">
+    <div class="chart-title" style="margin-bottom:1rem">Countries with Highest Geopolitical Gold Motivation (2023)</div>
+    <div class="table-wrap">
+      <table id="geoTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Country</th>
+            <th>Sanctions Score</th>
+            <th>Geo Risk</th>
+            <th>Geo Bloc</th>
+            <th>Gold Share %</th>
+            <th>Accum. Streak</th>
+            <th>Gold YoY %</th>
+          </tr>
+        </thead>
+        <tbody id="geoTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ═══ SECTION 4: ML PREDICTIONS ═══ -->
+<section id="predictions">
+  <div class="section-title">🤖 ML Predictions: 2025 Gold Accumulators</div>
+  <p class="section-desc">
+    An interpretable scoring model using gradient boosting feature importance weights ranks 68 countries
+    (gold holdings &gt; $500M) by their probability of increasing gold reserves in 2025.
+  </p>
+
+  <div class="chart-grid cols-2">
+    <div class="chart-card full">
+      <div class="chart-title">Top 10 Countries Predicted to Increase Gold Reserves in 2025</div>
+      <div class="chart-subtitle">Score: Gold Momentum (40%) + USD Decline (27%) + USD Drawdown (18%) + Global Trend (10%) + Geo Risk (5%) + Sanctions Bonus</div>
+      <div class="chart-wrap tall">
+        <canvas id="predictChart"></canvas>
+      </div>
+      <div class="legend-row">
+        <div class="legend-item"><div class="legend-dot" style="background:#C0392B"></div>Heavily Sanctioned (score ≥ 2)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#E67E22"></div>High Geopolitical Risk</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#1F3A6E"></div>Strong Recent Accumulator</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature weights -->
+  <div class="chart-grid cols-2" style="margin-top:1.5rem">
+    <div class="chart-card">
+      <div class="chart-title">Feature Weight Distribution</div>
+      <div class="chart-subtitle">Data-driven weights from gradient boosting importance</div>
+      <div class="chart-wrap short">
+        <canvas id="weightsChart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Scoring Methodology</div>
+      <div class="chart-subtitle">How the model works</div>
+      <div style="padding: 0.5rem 0; line-height: 2; font-size: 0.87rem; color: var(--muted);">
+        <div>1️⃣ &nbsp; Each feature <strong style="color:var(--text)">percentile-ranked</strong> across all 2023 countries</div>
+        <div>2️⃣ &nbsp; <strong style="color:var(--text)">Weighted sum</strong> using GB importance coefficients</div>
+        <div>3️⃣ &nbsp; <strong style="color:var(--red)">Sanctions bonus</strong> added: +5 to +18 pts</div>
+        <div>4️⃣ &nbsp; Final score <strong style="color:var(--text)">normalized 0–100</strong></div>
+        <div>5️⃣ &nbsp; Binary classifier: LR + GB from scratch (NumPy)</div>
+        <div style="margin-top:1rem; padding: 0.8rem; background: var(--card2); border-radius:8px; border-left: 3px solid var(--gold);">
+          <div style="font-size:0.78rem; color:var(--muted)">Training: 2001–2019 | Test: 2020–2024</div>
+          <div style="font-size:0.78rem; color:var(--muted); margin-top:0.3rem">178 countries · 4,283 observations · 15 features</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top 15 table -->
+  <div style="margin-top:1.5rem">
+    <div class="chart-title" style="margin-bottom:1rem">Full Scoring Results — Top 20 Countries</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Country</th>
+            <th>Score</th>
+            <th>Gold Share %</th>
+            <th>YoY %</th>
+            <th>Streak</th>
+            <th>Sanctions</th>
+            <th>Geo Risk</th>
+          </tr>
+        </thead>
+        <tbody id="predTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ═══ SECTION 5: EXPLORER ═══ -->
+<section id="explorer">
+  <div class="section-title">🔍 Country Explorer</div>
+  <p class="section-desc">Deep-dive into any country's gold reserve history, geopolitical profile, and ML score.</p>
+
+  <div class="controls">
+    <label style="color:var(--muted); font-size:0.87rem">Select Country:</label>
+    <select id="explorerCountry">
+      <option value="China">China</option>
+      <option value="India">India</option>
+      <option value="Poland">Poland</option>
+      <option value="Czechia">Czechia</option>
+      <option value="Singapore">Singapore</option>
+      <option value="Turkiye">Turkiye</option>
+      <option value="Russian Federation">Russian Federation</option>
+      <option value="United States">United States</option>
+    </select>
+  </div>
+
+  <div id="explorerContent">
+    <div class="kpi-grid" id="explorerKPIs" style="grid-template-columns: repeat(4, 1fr)"></div>
+    <div class="chart-card" style="margin-top:1rem">
+      <div class="chart-title" id="explorerChartTitle">Country Gold Share History</div>
+      <div class="chart-wrap">
+        <canvas id="explorerChart"></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <strong>Gold Reserve Intelligence Platform</strong> &nbsp;·&nbsp;
+  Data: World Bank · IMF COFER · OFAC Sanctions · UN Voting · GDELT News &nbsp;·&nbsp;
+  Models: Logistic Regression + Gradient Boosting (from scratch, NumPy) &nbsp;·&nbsp;
+  Built by <strong>Sathwik Arroju</strong>
+  <br>
+  <span style="font-size:0.75rem; margin-top:0.3rem; display:block">178 countries · 25 years · 4,283 observations · V4 Platform</span>
+</footer>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     DATA + CHARTS
+═══════════════════════════════════════════════════════════════ -->
+<script>
+// ── Embedded Data ──────────────────────────────────────────────────────────
+const DATA = {
+  years: [2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024],
+  usd_share: [71.1,71.5,67.1,65.5,65.9,66.5,65.5,63.9,64.2,62.1,61.8,62.6,61.5,61.2,65.1,65.7,65.3,62.7,61.7,60.9,59.0,58.8,58.4,57.3,57.1],
+  world_gold_share: [11.71,11.1,11.55,11.06,9.44,9.49,9.52,9.55,9.15,10.12,11.75,11.43,11.74,8.44,8.63,8.38,9.21,9.84,9.82,11.29,12.92,11.95,12.93,14.21,17.44],
+  world_gold_bn: [248.7,247.9,303.3,361.8,374.1,429.3,526.7,680.3,711.3,915.2,1190.2,1314.1,1451.8,1072.7,1086.1,985.5,1069.1,1228.0,1222.9,1478.4,1853.2,1803.6,1818.3,2093.4,2472.9],
+  accum_rates: [0,58.8,63.7,62,60.2,60.2,62.4,61.5,59.4,61.7,60.9,63.8,65.1,5.1,57.4,7.4,58,63.1,10.3,63,59.3,11.8,15.5,60.8,70.4],
+
+  holders: {
+    countries: ["United States","Germany","Italy","France","Russia","China","Switzerland","Japan","India","Turkiye"],
+    gold_bn: [539.3,222.3,162.6,161.6,154.7,148.2,69.0,56.1,53.3,48.2],
+    gold_share: [69.7,68.9,65.7,67.1,25.9,4.3,8.0,4.3,8.5,34.2]
+  },
+
+  sanctions: {
+    labels: ["None (0)","Low (1)","Medium (2)"],
+    avg_gold: [10.3,11.0,18.8],
+    n: [157,5,4]
+  },
+
+  blocs: {
+    labels: ["US-Allied","Neutral","US-Divergent"],
+    streak: [1.03,0.84,1.17],
+    gold: [19.3,6.5,15.8]
+  },
+
+  top10: {
+    countries: ["Belarus","Libya","Guinea","Iraq","Kyrgyz Republic","Czechia","Singapore","Mongolia","Poland","China"],
+    scores: [100.0,96.2,90.9,89.3,86.5,84.8,82.8,82.0,81.6,81.6],
+    sanctions: [2,1,0,1,0,0,0,0,0,0],
+    geo: ["high","high","medium","medium","medium","low","medium","medium","low","high"],
+    yoy: [14.0,43.1,180.6,24.5,49.8,191.9,70.3,39.5,78.5,26.5],
+    streak: [5,1,1,2,2,5,1,1,1,2],
+    gold_share: [44.1,10.5,36.2,8.4,44.2,1.4,4.2,10.8,12.3,4.3]
+  },
+
+  top20: [
+    {country:"Belarus",score:100.0,gold_share:44.1,yoy:14.0,streak:5,sanctions:2,geo:"high"},
+    {country:"Libya",score:96.2,gold_share:10.5,yoy:43.1,streak:1,sanctions:1,geo:"high"},
+    {country:"Guinea",score:90.9,gold_share:36.2,yoy:180.6,streak:1,sanctions:0,geo:"medium"},
+    {country:"Iraq",score:89.3,gold_share:8.4,yoy:24.5,streak:2,sanctions:1,geo:"medium"},
+    {country:"Kyrgyz Republic",score:86.5,gold_share:44.2,yoy:49.8,streak:2,sanctions:0,geo:"medium"},
+    {country:"Czechia",score:84.8,gold_share:1.4,yoy:191.9,streak:5,sanctions:0,geo:"low"},
+    {country:"Singapore",score:82.8,gold_share:4.2,yoy:70.3,streak:1,sanctions:0,geo:"medium"},
+    {country:"Mongolia",score:82.0,gold_share:10.8,yoy:39.5,streak:1,sanctions:0,geo:"medium"},
+    {country:"Poland",score:81.6,gold_share:12.3,yoy:78.5,streak:1,sanctions:0,geo:"low"},
+    {country:"China",score:81.6,gold_share:4.3,yoy:26.5,streak:2,sanctions:0,geo:"high"},
+    {country:"Australia",score:77.3,gold_share:8.3,yoy:53.7,streak:1,sanctions:0,geo:"low"},
+    {country:"Qatar",score:76.3,gold_share:13.0,yoy:25.2,streak:2,sanctions:0,geo:"medium"},
+    {country:"Serbia",score:72.4,gold_share:9.6,yoy:18.2,streak:8,sanctions:0,geo:"medium"},
+    {country:"India",score:72.4,gold_share:8.5,yoy:16.1,streak:8,sanctions:0,geo:"medium"},
+    {country:"Jordan",score:72.2,gold_share:24.8,yoy:17.7,streak:5,sanctions:0,geo:"medium"},
+    {country:"Armenia",score:68.1,gold_share:14.3,yoy:15.4,streak:3,sanctions:1,geo:"medium"},
+    {country:"Ghana",score:65.2,gold_share:7.1,yoy:22.8,streak:2,sanctions:0,geo:"medium"},
+    {country:"Turkey",score:63.9,gold_share:34.2,yoy:8.9,streak:3,sanctions:0,geo:"medium"},
+    {country:"Hungary",score:62.8,gold_share:8.1,yoy:12.3,streak:4,sanctions:0,geo:"low"},
+    {country:"Ecuador",score:61.4,gold_share:22.5,yoy:14.6,streak:2,sanctions:0,geo:"neutral"},
+  ],
+
+  countries: {
+    China: {years:[2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024],share:[2.03,2.02,2.22,1.93,1.36,1.19,1.13,1.04,0.85,1.5,1.63,1.59,1.66,1.05,1.05,1.76,2.19,2.37,2.41,2.96,3.53,3.33,3.54,4.3,5.53],geo:"high",sanctions:0,score:81.6,streak:2},
+    India: {years:[2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024],share:[7.69,6.48,5.51,4.63,3.83,4.28,4.11,3.47,3.89,6.85,8.39,9.19,9.93,7.25,6.65,5.38,5.68,5.64,6.2,6.71,6.97,6.91,8.09,8.49,11.43],geo:"medium",sanctions:0,score:72.4,streak:8},
+    Poland: {years:[2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024],share:[3.3,3.44,3.81,4.06,3.94,3.99,4.34,4.2,4.63,4.52,4.98,5.18,5.06,3.75,3.97,3.7,3.32,3.79,4.53,8.72,9.02,8.14,7.99,12.27,16.85],geo:"low",sanctions:0,score:81.6,streak:1},
+    Czechia: {years:[2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024],share:[0.93,0.85,0.64,0.68,0.67,0.76,0.87,1.02,0.99,1.08,1.35,1.52,1.38,0.75,0.75,0.53,0.42,0.27,0.25,0.26,0.35,0.36,0.5,1.37,2.93],geo:"low",sanctions:0,score:84.8,streak:5},
+    Singapore: {years:[2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024],share:[1.39,1.48,1.68,1.75,1.57,1.78,1.88,2.06,2.01,2.32,2.49,2.57,2.56,1.78,1.89,1.72,1.87,1.86,1.79,2.19,2.09,2.12,3.02,4.24,4.81],geo:"medium",sanctions:0,score:82.8,streak:1},
+    Turkiye: {years:[2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024],share:[4.36,5.18,4.51,4.38,4.38,3.65,3.75,4.07,4.41,5.42,6.1,10.93,16.14,15.36,16.1,15.9,13.25,21.87,21.65,25.65,46.54,34.62,35.61,34.19,41.3],geo:"medium",sanctions:0,score:63.9,streak:3},
+    "Russian Federation": {years:[2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],share:[12.26,10.36,8.84,6.68,4.32,3.5,2.7,2.52,3.41,5.17,7.44,8.74,9.53,7.87,12.13,13.1,15.78,17.71,18.58,20.03,23.42,21.3,23.37,25.9],geo:"high",sanctions:3,score:null,streak:0},
+    "United States": {years:[2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024],share:[55.92,55.69,56.92,59.3,60.16,71.27,75.19,78.55,77.35,70.37,75.17,74.52,75.77,70.23,72.6,72.24,73.82,75.13,74.49,77.08,78.7,66.46,67.07,69.73,74.97],geo:"low",sanctions:0,score:null,streak:0}
+  },
+
+  geoProfiles: [
+    {country:"Belarus",sanctions:2,geo:"high",bloc:"us_divergent",gold_share:44.1,streak:5,yoy:14.0},
+    {country:"Libya",sanctions:1,geo:"high",bloc:"us_divergent",gold_share:10.5,streak:1,yoy:43.1},
+    {country:"Iraq",sanctions:1,geo:"medium",bloc:"neutral",gold_share:8.4,streak:2,yoy:24.5},
+    {country:"Armenia",sanctions:1,geo:"medium",bloc:"neutral",gold_share:14.3,streak:3,yoy:15.4},
+    {country:"Russian Federation",sanctions:3,geo:"high",bloc:"us_divergent",gold_share:25.9,streak:0,yoy:0},
+    {country:"Iran",sanctions:3,geo:"high",bloc:"us_divergent",gold_share:2.1,streak:0,yoy:0},
+    {country:"Kyrgyz Republic",sanctions:0,geo:"medium",bloc:"neutral",gold_share:44.2,streak:2,yoy:49.8},
+    {country:"Uzbekistan",sanctions:0,geo:"medium",bloc:"neutral",gold_share:64.1,streak:3,yoy:8.5},
+    {country:"Tajikistan",sanctions:0,geo:"medium",bloc:"neutral",gold_share:85.3,streak:2,yoy:5.2},
+    {country:"China",sanctions:0,geo:"high",bloc:"us_divergent",gold_share:4.3,streak:2,yoy:26.5}
+  ]
+};
+
+// ── Chart Defaults ────────────────────────────────────────────────────────────
+Chart.defaults.color = '#8899AA';
+Chart.defaults.borderColor = '#2A3548';
+Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+Chart.defaults.font.size = 11;
+
+const GOLD = '#D4AF37';
+const BLUE = '#4A90D9';
+const RED = '#C0392B';
+const ORANGE = '#E67E22';
+const GREEN = '#27AE60';
+const NAVY = '#1F3A6E';
+
+// ── Chart 1: Top 10 Holders ─────────────────────────────────────────────────
+new Chart(document.getElementById('holdersChart'), {
+  type: 'bar',
+  data: {
+    labels: DATA.holders.countries,
+    datasets: [{
+      label: 'Gold Holdings ($B)',
+      data: DATA.holders.gold_bn,
+      backgroundColor: DATA.holders.countries.map((c,i) =>
+        i === 0 ? 'rgba(212,175,55,0.85)' : 'rgba(212,175,55,0.5)'
+      ),
+      borderColor: GOLD,
+      borderWidth: 1,
+      borderRadius: 4
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: '#2A3548' }, title: { display: true, text: 'USD Billions' } },
+      y: { grid: { display: false } }
+    }
+  }
+});
+
+// ── Chart 2: Accumulation Rate ────────────────────────────────────────────────
+new Chart(document.getElementById('accumChart'), {
+  type: 'line',
+  data: {
+    labels: DATA.years,
+    datasets: [{
+      label: '% Countries Accumulating',
+      data: DATA.accum_rates,
+      borderColor: GOLD,
+      backgroundColor: 'rgba(212,175,55,0.1)',
+      fill: true,
+      tension: 0.35,
+      pointRadius: 2,
+      borderWidth: 2.5
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: '#2A3548' } },
+      y: { grid: { color: '#2A3548' }, min: 0, max: 100, title: { display: true, text: '% Accumulating' } }
+    }
+  }
+});
+
+// ── Chart 3: USD vs Gold ────────────────────────────────────────────────────
+new Chart(document.getElementById('usdGoldChart'), {
+  type: 'line',
+  data: {
+    labels: DATA.years,
+    datasets: [
+      {
+        label: 'USD Share of Reserves (%)',
+        data: DATA.usd_share,
+        borderColor: BLUE,
+        backgroundColor: 'rgba(74,144,217,0.08)',
+        fill: true, tension: 0.3,
+        pointRadius: 3, borderWidth: 2.5,
+        yAxisID: 'y'
+      },
+      {
+        label: 'World Gold Share (%)',
+        data: DATA.world_gold_share,
+        borderColor: GOLD,
+        backgroundColor: 'rgba(212,175,55,0.08)',
+        fill: true, tension: 0.3,
+        pointRadius: 3, borderWidth: 2.5,
+        yAxisID: 'y2'
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { position: 'top', labels: { boxWidth: 14, padding: 16 } },
+      tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%` } }
+    },
+    scales: {
+      x: { grid: { color: '#2A3548' } },
+      y: { grid: { color: '#2A3548' }, position: 'left', title: { display: true, text: 'USD Share (%)' }, min: 50, max: 80 },
+      y2: { grid: { display: false }, position: 'right', title: { display: true, text: 'Gold Share (%)' }, min: 5, max: 22 }
+    }
+  }
+});
+
+// ── Chart 4: Country Trend ────────────────────────────────────────────────────
+const COUNTRY_COLORS = {
+  China: '#E74C3C', India: '#3498DB', Poland: '#2ECC71',
+  Czechia: '#9B59B6', Singapore: '#F39C12', Turkiye: '#1ABC9C',
+  'Russian Federation': '#E67E22', 'United States': '#95A5A6'
+};
+
+let countryChart = null;
+
+function updateCountryChart() {
+  const select = document.getElementById('countrySelect');
+  const selected = Array.from(select.selectedOptions).map(o => o.value);
+  if (countryChart) countryChart.destroy();
+
+  const datasets = selected.map(c => ({
+    label: c,
+    data: DATA.countries[c] ? DATA.countries[c].years.map((yr, i) => ({x: yr, y: DATA.countries[c].share[i]})) : [],
+    borderColor: COUNTRY_COLORS[c] || GOLD,
+    backgroundColor: 'transparent',
+    tension: 0.3, pointRadius: 2, borderWidth: 2
+  }));
+
+  countryChart = new Chart(document.getElementById('countryTrendChart'), {
+    type: 'line',
+    data: { datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'top', labels: { boxWidth: 12, padding: 12, font: { size: 11 } } },
+        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%` } }
+      },
+      scales: {
+        x: { type: 'linear', grid: { color: '#2A3548' }, min: 2000, max: 2024 },
+        y: { grid: { color: '#2A3548' }, title: { display: true, text: 'Gold Share (%)' } }
+      }
+    }
+  });
+}
+
+document.getElementById('countrySelect').addEventListener('change', updateCountryChart);
+updateCountryChart();
+
+// ── Chart 5: Sanctions ────────────────────────────────────────────────────────
+new Chart(document.getElementById('sanctionsChart'), {
+  type: 'bar',
+  data: {
+    labels: DATA.sanctions.labels,
+    datasets: [{
+      label: 'Avg Gold Share (%)',
+      data: DATA.sanctions.avg_gold,
+      backgroundColor: [GREEN, ORANGE, RED],
+      borderWidth: 0,
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => `Avg Gold Share: ${ctx.parsed.y}% (n=${DATA.sanctions.n[ctx.dataIndex]})` } }
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: '#2A3548' }, title: { display: true, text: 'Avg Gold Share (%)' }, min: 0, max: 25 }
+    }
+  }
+});
+
+// ── Chart 6: Geo Bloc ─────────────────────────────────────────────────────────
+new Chart(document.getElementById('blocChart'), {
+  type: 'bar',
+  data: {
+    labels: DATA.blocs.labels,
+    datasets: [
+      {
+        label: 'Avg Accumulation Streak (yrs)',
+        data: DATA.blocs.streak,
+        backgroundColor: [BLUE, '#5D7EA8', RED],
+        borderWidth: 0, borderRadius: 6,
+        yAxisID: 'y'
+      },
+      {
+        label: 'Avg Gold Share (%)',
+        data: DATA.blocs.gold,
+        type: 'line',
+        borderColor: GOLD, backgroundColor: 'transparent',
+        tension: 0.3, borderWidth: 2.5, pointRadius: 5,
+        yAxisID: 'y2'
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { position: 'top', labels: { boxWidth: 12, padding: 12 } } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: '#2A3548' }, title: { display: true, text: 'Avg Streak (yrs)' } },
+      y2: { grid: { display: false }, position: 'right', title: { display: true, text: 'Avg Gold Share (%)' } }
+    }
+  }
+});
+
+// ── Geopolitics Table ─────────────────────────────────────────────────────────
+const geoTbody = document.getElementById('geoTableBody');
+DATA.geoProfiles.forEach((r, i) => {
+  const sanctBadge = r.sanctions >= 2
+    ? `<span class="badge badge-red">${r.sanctions} — Heavy</span>`
+    : r.sanctions === 1
+    ? `<span class="badge badge-orange">${r.sanctions} — Low</span>`
+    : `<span class="badge badge-gray">${r.sanctions} — None</span>`;
+
+  const geoBadge = r.geo === 'high'
+    ? `<span class="badge badge-red">${r.geo}</span>`
+    : r.geo === 'medium'
+    ? `<span class="badge badge-orange">${r.geo}</span>`
+    : `<span class="badge badge-green">${r.geo}</span>`;
+
+  const blocBadge = r.bloc === 'us_divergent'
+    ? `<span class="badge badge-red">US Divergent</span>`
+    : r.bloc === 'US_allied'
+    ? `<span class="badge badge-blue">US Allied</span>`
+    : `<span class="badge badge-gray">Neutral</span>`;
+
+  geoTbody.innerHTML += `<tr>
+    <td class="rank">${i+1}</td>
+    <td><strong>${r.country}</strong></td>
+    <td>${sanctBadge}</td>
+    <td>${geoBadge}</td>
+    <td>${blocBadge}</td>
+    <td>${r.gold_share.toFixed(1)}%</td>
+    <td>${r.streak} yr${r.streak !== 1 ? 's' : ''}</td>
+    <td style="color:${r.yoy > 0 ? '#55EE88' : '#FF6B6B'}">${r.yoy > 0 ? '+' : ''}${r.yoy.toFixed(1)}%</td>
+  </tr>`;
+});
+
+// ── Chart 7: ML Predictions ───────────────────────────────────────────────────
+const predColors = DATA.top10.sanctions.map((s, i) =>
+  s >= 2 ? 'rgba(192,57,43,0.85)' :
+  DATA.top10.geo[i] === 'high' ? 'rgba(230,126,34,0.85)' :
+  'rgba(31,58,110,0.85)'
+);
+
+new Chart(document.getElementById('predictChart'), {
+  type: 'bar',
+  data: {
+    labels: DATA.top10.countries,
+    datasets: [{
+      label: 'Gold Accumulation Score',
+      data: DATA.top10.scores,
+      backgroundColor: predColors,
+      borderColor: predColors.map(c => c.replace('0.85', '1')),
+      borderWidth: 1,
+      borderRadius: 4
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => [
+            `Score: ${ctx.parsed.x.toFixed(1)} / 100`,
+            `Gold YoY: +${DATA.top10.yoy[ctx.dataIndex]}%`,
+            `Streak: ${DATA.top10.streak[ctx.dataIndex]} yr(s)`,
+            `Sanctions: ${DATA.top10.sanctions[ctx.dataIndex]}`,
+            `Geo Risk: ${DATA.top10.geo[ctx.dataIndex]}`
+          ]
+        }
+      }
+    },
+    scales: {
+      x: { grid: { color: '#2A3548' }, min: 0, max: 110, title: { display: true, text: 'Score (0–100)' } },
+      y: { grid: { display: false } }
+    }
+  }
+});
+
+// ── Chart 8: Feature Weights ───────────────────────────────────────────────────
+new Chart(document.getElementById('weightsChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Gold Momentum', 'USD Decline', 'USD Drawdown', 'Global Trend', 'Geo Risk'],
+    datasets: [{
+      data: [40, 27, 18, 10, 5],
+      backgroundColor: [GOLD, BLUE, ORANGE, GREEN, RED],
+      borderColor: '#111827', borderWidth: 2
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'right', labels: { boxWidth: 12, padding: 10, font: { size: 10 } } },
+      tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed}%` } }
+    }
+  }
+});
+
+// ── Predictions Table ─────────────────────────────────────────────────────────
+const predTbody = document.getElementById('predTableBody');
+DATA.top20.forEach((r, i) => {
+  const sanctBadge = r.sanctions >= 2
+    ? `<span class="badge badge-red">${r.sanctions}</span>`
+    : r.sanctions === 1
+    ? `<span class="badge badge-orange">${r.sanctions}</span>`
+    : `<span class="badge badge-gray">${r.sanctions}</span>`;
+
+  const geoBadge = r.geo === 'high'
+    ? `<span class="badge badge-red">${r.geo}</span>`
+    : r.geo === 'medium'
+    ? `<span class="badge badge-orange">${r.geo}</span>`
+    : `<span class="badge badge-green">${r.geo}</span>`;
+
+  const scorePct = r.score / 100;
+  const scoreColor = scorePct > 0.7 ? '#55EE88' : scorePct > 0.4 ? GOLD : '#AAAAAA';
+
+  predTbody.innerHTML += `<tr>
+    <td class="rank">${i+1}</td>
+    <td><strong>${r.country}</strong></td>
+    <td style="color:${scoreColor}; font-weight:700">${r.score.toFixed(1)}</td>
+    <td>${r.gold_share.toFixed(1)}%</td>
+    <td style="color:#55EE88">+${r.yoy.toFixed(1)}%</td>
+    <td>${r.streak} yr${r.streak !== 1 ? 's' : ''}</td>
+    <td>${sanctBadge}</td>
+    <td>${geoBadge}</td>
+  </tr>`;
+});
+
+// ── Country Explorer ──────────────────────────────────────────────────────────
+let explorerChart = null;
+
+function updateExplorer() {
+  const country = document.getElementById('explorerCountry').value;
+  const d = DATA.countries[country];
+  if (!d) return;
+
+  const latest = d.share[d.share.length - 1];
+  const prev = d.share[d.share.length - 2];
+  const change = (latest - prev).toFixed(2);
+  const peak = Math.max(...d.share);
+
+  document.getElementById('explorerChartTitle').textContent = `${country} — Gold Share of Reserves (%) 2000–2024`;
+
+  const kpiHtml = `
+    <div class="kpi-card"><div class="kpi-label">Latest Gold Share</div><div class="kpi-value">${latest.toFixed(1)}%</div><div class="kpi-sub">${change > 0 ? '+' : ''}${change}pp YoY</div></div>
+    <div class="kpi-card"><div class="kpi-label">Peak Gold Share</div><div class="kpi-value">${peak.toFixed(1)}%</div><div class="kpi-sub">All-time high</div></div>
+    <div class="kpi-card"><div class="kpi-label">Geo Risk</div><div class="kpi-value" style="font-size:1.4rem">${d.geo.toUpperCase()}</div><div class="kpi-sub">Sanctions: ${d.sanctions}</div></div>
+    <div class="kpi-card"><div class="kpi-label">ML Score 2025</div><div class="kpi-value">${d.score !== null ? d.score + '/100' : 'N/A'}</div><div class="kpi-sub">${d.streak > 0 ? d.streak + '-yr streak' : 'Not accumulating'}</div></div>
+  `;
+  document.getElementById('explorerKPIs').innerHTML = kpiHtml;
+
+  if (explorerChart) explorerChart.destroy();
+  explorerChart = new Chart(document.getElementById('explorerChart'), {
+    type: 'line',
+    data: {
+      labels: d.years,
+      datasets: [{
+        label: `${country} Gold Share (%)`,
+        data: d.share,
+        borderColor: COUNTRY_COLORS[country] || GOLD,
+        backgroundColor: `${COUNTRY_COLORS[country] || GOLD}22`,
+        fill: true, tension: 0.35,
+        pointRadius: 3, borderWidth: 2.5
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: '#2A3548' } },
+        y: { grid: { color: '#2A3548' }, title: { display: true, text: 'Gold Share (%)' } }
+      }
+    }
+  });
+}
+
+document.getElementById('explorerCountry').addEventListener('change', updateExplorer);
+updateExplorer();
+
+// ── Nav Active State ──────────────────────────────────────────────────────────
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-links a');
+
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => {
+    if (window.scrollY >= s.offsetTop - 120) current = s.id;
+  });
+  navLinks.forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+  });
+});
+</script>
+</body>
+</html>
