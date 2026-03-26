@@ -180,7 +180,7 @@ elif page == "📉 Gold vs USD":
             line=dict(color="#D4AF37", width=2.5)
         ), secondary_y=True)
         fig.update_layout(
-            title="USD Dominance vs Global Gold Share (2000–2024)",
+            title="USD Dominance vs Global Gold Share (2000–2025)",
             height=400, plot_bgcolor="#0E1117", paper_bgcolor="#0E1117",
             font=dict(color="white"),
             legend=dict(orientation="h", y=1.1)
@@ -390,7 +390,7 @@ elif page == "📰 Sentiment":
             line=dict(color="#2ECC71", width=2)
         ))
         fig.update_layout(
-            title="Global USD Sentiment in Financial News (2000–2024)",
+            title="Global USD Sentiment in Financial News (2000–2025)",
             xaxis_title="Year", yaxis_title="% of Articles",
             plot_bgcolor="#0E1117", paper_bgcolor="#0E1117",
             font=dict(color="white"), height=380,

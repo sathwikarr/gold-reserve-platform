@@ -29,8 +29,8 @@ STEPS = [
     ("2/8 — Cleaning USD dominance",      "src/cleaning/clean_usd_dominance.py"),
     ("3/8 — Cleaning geopolitical",       "src/cleaning/clean_geopolitical.py"),
     ("4/8 — Building features",           "src/features/build_features.py"),
-    ("5/8 — Building geo features",       "src/features/build_geo_features.py"),
-    ("6/8 — Building master panel",       "src/features/build_master_panel.py"),
+    ("5/8 — Building master panel",       "src/features/build_master_panel.py"),
+    ("6/8 — Building geo features",       "src/features/build_geo_features.py"),
     ("7/8 — Merging NLP features",        "src/nlp/merge_nlp_panel.py"),
     ("8/8 — ML: prepare → train → score", None),  # composite step
 ]
