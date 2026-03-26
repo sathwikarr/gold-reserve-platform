@@ -12,13 +12,14 @@ __pycache__/
 # Jupyter
 .ipynb_checkpoints/
 
-# Data (raw files stay local, not in git)
+# Data — raw and staging stay local (large/sensitive files)
 data/raw/*
 data/staging/*
-data/curated/*
 !data/raw/.gitkeep
 !data/staging/.gitkeep
-!data/curated/.gitkeep
+
+# Curated data IS committed — Streamlit Cloud needs it to run the app
+# !data/curated/*  ← intentionally NOT ignored
 
 # macOS
 .DS_Store

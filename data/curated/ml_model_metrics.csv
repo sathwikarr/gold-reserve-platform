@@ -1,0 +1,4 @@
+model,accuracy,precision,recall,f1,auc_roc,tp,tn,fp,fn
+Logistic Regression,0.2639,0.7874,0.2183,0.3419,0.5288,100,38,27,358
+Gradient Boosting,0.4015,0.8607,0.3777,0.525,0.5605,173,37,28,285
+Ensemble,0.2562,0.8,0.2009,0.3211,0.5282,92,42,23,366
