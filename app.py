@@ -37,7 +37,7 @@ df, scores = load_data()
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/thumb/d/d8/Gold_Bars.jpg/320px-Gold_Bars.jpg",
-                 use_column_width=True)
+                 use_container_width=True)
 st.sidebar.title("🏅 Gold Intelligence")
 st.sidebar.markdown("---")
 
@@ -142,10 +142,10 @@ if page == "🌍 Overview":
     img_col1, img_col2 = st.columns(2)
     with img_col1:
         if (DOCS / "top10_gold_holders.png").exists():
-            st.image(str(DOCS / "top10_gold_holders.png"), caption="Top 10 Gold Holders", use_column_width=True)
+            st.image(str(DOCS / "top10_gold_holders.png"), caption="Top 10 Gold Holders", use_container_width=True)
     with img_col2:
         if (DOCS / "accumulation_heatmap.png").exists():
-            st.image(str(DOCS / "accumulation_heatmap.png"), caption="Accumulation Heatmap by Country", use_column_width=True)
+            st.image(str(DOCS / "accumulation_heatmap.png"), caption="Accumulation Heatmap by Country", use_container_width=True)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PAGE 2 — GOLD vs USD
@@ -201,7 +201,7 @@ elif page == "📉 Gold vs USD":
         st.pyplot(fig)
 
     if (DOCS / "usd_vs_gold_thesis.png").exists():
-        st.image(str(DOCS / "usd_vs_gold_thesis.png"), use_column_width=True)
+        st.image(str(DOCS / "usd_vs_gold_thesis.png"), use_container_width=True)
 
     # Country-level gold trends
     st.markdown("---")
@@ -243,11 +243,11 @@ elif page == "📉 Gold vs USD":
     with img_col1:
         if (DOCS / "accumulation_vs_usd_decline.png").exists():
             st.image(str(DOCS / "accumulation_vs_usd_decline.png"),
-                     caption="Accumulation During USD Decline", use_column_width=True)
+                     caption="Accumulation During USD Decline", use_container_width=True)
     with img_col2:
         if (DOCS / "usd_drawdown_vs_gold_share.png").exists():
             st.image(str(DOCS / "usd_drawdown_vs_gold_share.png"),
-                     caption="USD Drawdown vs Gold Share", use_column_width=True)
+                     caption="USD Drawdown vs Gold Share", use_container_width=True)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PAGE 3 — GEOPOLITICS
@@ -352,10 +352,10 @@ elif page == "🌐 Geopolitics":
     img_col1, img_col2 = st.columns(2)
     with img_col1:
         if (DOCS / "geo_risk_vs_gold.png").exists():
-            st.image(str(DOCS / "geo_risk_vs_gold.png"), use_column_width=True)
+            st.image(str(DOCS / "geo_risk_vs_gold.png"), use_container_width=True)
     with img_col2:
         if (DOCS / "sanctions_vs_gold_share.png").exists():
-            st.image(str(DOCS / "sanctions_vs_gold_share.png"), use_column_width=True)
+            st.image(str(DOCS / "sanctions_vs_gold_share.png"), use_container_width=True)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PAGE 4 — NLP SENTIMENT
@@ -532,7 +532,7 @@ elif page == "🤖 ML Predictions":
 
     except ImportError:
         if (DOCS / "ml_top10_predictions.png").exists():
-            st.image(str(DOCS / "ml_top10_predictions.png"), use_column_width=True)
+            st.image(str(DOCS / "ml_top10_predictions.png"), use_container_width=True)
 
     # Full ranking table
     st.markdown("---")
@@ -562,13 +562,13 @@ elif page == "🤖 ML Predictions":
     img_col1, img_col2, img_col3 = st.columns(3)
     with img_col1:
         if (DOCS / "ml_feature_importance.png").exists():
-            st.image(str(DOCS / "ml_feature_importance.png"), caption="Feature Importance", use_column_width=True)
+            st.image(str(DOCS / "ml_feature_importance.png"), caption="Feature Importance", use_container_width=True)
     with img_col2:
         if (DOCS / "ml_roc_curves.png").exists():
-            st.image(str(DOCS / "ml_roc_curves.png"), caption="ROC Curves", use_column_width=True)
+            st.image(str(DOCS / "ml_roc_curves.png"), caption="ROC Curves", use_container_width=True)
     with img_col3:
         if (DOCS / "ml_confusion_matrix.png").exists():
-            st.image(str(DOCS / "ml_confusion_matrix.png"), caption="Confusion Matrix", use_column_width=True)
+            st.image(str(DOCS / "ml_confusion_matrix.png"), caption="Confusion Matrix", use_container_width=True)
 
     with st.expander("📖 Methodology Notes"):
         st.markdown("""
