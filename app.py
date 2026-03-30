@@ -51,11 +51,13 @@ DOCS    = BASE / "docs"
 
 @st.cache_data
 def load_data():
-    df     = pd.read_csv(CURATED / "master_panel_nlp.csv")
-    scores = pd.read_csv(CURATED / "ml_country_scores.csv")
-    return df, scores
+    df      = pd.read_csv(CURATED / "master_panel_nlp.csv")
+    scores  = pd.read_csv(CURATED / "ml_country_scores.csv")
+    metrics_path = CURATED / "ml_model_metrics.csv"
+    metrics = pd.read_csv(metrics_path) if metrics_path.exists() else pd.DataFrame()
+    return df, scores, metrics
 
-df, scores = load_data()
+df, scores, model_metrics = load_data()
 
 latest_year = int(df["year"].max())
 latest      = df[df.year == latest_year]
@@ -78,8 +80,8 @@ st.sidebar.markdown("---")
 st.sidebar.markdown(f"""
 **Project:** Central Bank Gold Accumulation vs USD Power & Geopolitical Risk
 **Data:** World Bank · IMF COFER · OFAC · UN Voting · GDELT
-**Model:** Logistic Regression + Gradient Boosting
-**Period:** 2000–{latest_year} · {df['country'].nunique()} Countries
+**Scoring:** 4-Pillar Rule Model (XGBoost-validated)
+**Period:** 2000–{latest_year} · {df['country'].nunique()} Countries · {len(scores)} Scored
 """)
 
 import plotly.graph_objects as go
@@ -96,16 +98,18 @@ if page == "🌍 Overview":
     )
 
     # ── KPI row ───────────────────────────────────────────────────────────────
-    world_gold_bn = latest["world_gold_value_bn"].iloc[0] if len(latest) > 0 else 0
-    accumulators  = int(latest["is_accumulating"].sum())
-    usd_drawdown  = latest["usd_share_drawdown_pct"].mean()
-    sanctioned    = int((latest["sanctions_score"] >= 1).sum())
+    world_gold_bn      = latest["world_gold_value_bn"].iloc[0] if len(latest) > 0 else 0
+    accumulators       = int(latest["is_accumulating"].sum())
+    usd_drawdown       = latest["usd_share_drawdown_pct"].mean()
+    sanctioned         = int((latest["sanctions_score"] >= 1).sum())
+    acc_during_usd_dec = int(latest["accumulating_during_usd_decline"].sum()) if "accumulating_during_usd_decline" in latest.columns else 0
+    pct_panel          = f"{acc_during_usd_dec}/{accumulators} accumulators" if accumulators > 0 else ""
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("🌎 World Gold Reserves",    f"${world_gold_bn/1000:.1f}T",   f"{latest_year}")
-    c2.metric("📈 Countries Accumulating", f"{accumulators}",                f"in {latest_year}")
-    c3.metric("💵 Avg USD Drawdown",       f"{usd_drawdown:.1f}%",           "from peak")
-    c4.metric("⚠️ Sanctioned Accumulators", f"{sanctioned}",                  "score ≥ 1")
+    c1.metric("🌎 World Gold Reserves",        f"${world_gold_bn/1000:.1f}T",  f"{latest_year}")
+    c2.metric("📈 Countries Accumulating",     f"{accumulators}",               f"in {latest_year}")
+    c3.metric("💵 Avg USD Drawdown from Peak", f"{usd_drawdown:.1f}%",          "since peak USD share")
+    c4.metric("⚠️ Sanctioned Accumulators",    f"{sanctioned}",                 "OFAC score ≥ 1")
 
     st.markdown("---")
 
@@ -115,12 +119,16 @@ if page == "🌍 Overview":
         st.subheader(f"🏆 Top 15 Gold Holders ({latest_year})")
         st.caption("Bar length = total gold value · Color intensity = gold's share of that country's total reserves")
 
+        extra_cols = [c for c in ["country_share_of_world_gold_pct", "gold_rank", "total_reserves_usd"]
+                      if c in latest.columns]
         top15 = (
             latest.nlargest(15, "gold_value_usd")
-            [["country", "gold_value_usd", "gold_share_pct"]]
-            .dropna()
+            [["country", "gold_value_usd", "gold_share_pct"] + extra_cols]
+            .dropna(subset=["gold_value_usd"])
         ).copy()
         top15["gold_bn"] = (top15["gold_value_usd"] / 1e9).round(1)
+        if "total_reserves_usd" in top15.columns:
+            top15["total_res_bn"] = (top15["total_reserves_usd"] / 1e9).round(1)
         top15 = top15.sort_values("gold_bn")  # ascending so largest is at top in h-bar
 
         fig_bar = go.Figure(go.Bar(
@@ -139,7 +147,7 @@ if page == "🌍 Overview":
             ),
             text=top15["gold_bn"].astype(str) + "B",
             textposition="outside",
-            hovertemplate="%{y}<br>Gold Value: $%{x:.1f}B<br>Gold Share: %{marker.color:.1f}%<extra></extra>"
+            hovertemplate="%{y}<br>Gold Value: $%{x:.1f}B<br>Gold Share: %{marker.color:.1f}%<br>Click chart for full profile<extra></extra>"
         ))
         fig_bar.update_layout(
             **dark_layout(height=430, t=10, b=40, l=10, r=80, legend_h=False),
@@ -1268,6 +1276,62 @@ elif page == "🤖 ML Predictions":
 
         **Validation period:** 2020–{max_data_year} · **Target:** Gold share increase year-over-year
         """)
+
+    # ── Model Performance Metrics ─────────────────────────────────────────────
+    st.markdown("---")
+    st.subheader("📐 Model Performance — Validation Results")
+    st.markdown(
+        f"The scoring model was validated against known gold-buying behaviour from 2020 to {max_data_year}. "
+        "Three approaches were benchmarked — Logistic Regression, Gradient Boosting, and an Ensemble — "
+        "with Gradient Boosting achieving the strongest predictive signal. "
+        "The 4-pillar rule system was calibrated against these results."
+    )
+
+    if not model_metrics.empty:
+        # Format for display
+        disp_metrics = model_metrics.copy()
+        rename_map = {
+            "model": "Model", "accuracy": "Accuracy", "precision": "Precision",
+            "recall": "Recall", "f1": "F1 Score", "auc_roc": "AUC-ROC",
+            "tp": "True Pos", "tn": "True Neg", "fp": "False Pos", "fn": "False Neg"
+        }
+        disp_metrics = disp_metrics.rename(columns={c: rename_map.get(c, c) for c in disp_metrics.columns})
+        for col in ["Accuracy", "Precision", "Recall", "F1 Score", "AUC-ROC"]:
+            if col in disp_metrics.columns:
+                disp_metrics[col] = disp_metrics[col].map(lambda x: f"{x:.3f}")
+        st.dataframe(disp_metrics, use_container_width=True, hide_index=True)
+        st.caption(
+            "**Accuracy** = % of predictions correct overall · "
+            "**Precision** = of predicted buyers, how many actually bought · "
+            "**Recall** = of actual buyers, how many were predicted · "
+            "**F1** = harmonic mean of precision and recall · "
+            "**AUC-ROC** = ability to rank buyers above non-buyers (0.5 = random, 1.0 = perfect). "
+            "Gradient Boosting performs best across all metrics."
+        )
+    else:
+        st.info("Model metrics file not found. Re-run `src/ml/train_model.py` to generate.")
+
+    # ── Country Coverage Explainer ────────────────────────────────────────────
+    st.markdown("---")
+    st.subheader("🔍 Data Coverage — Why Not All Countries Are Scored")
+    total_panel   = df["country"].nunique()
+    scored_n      = len(scores)
+    filtered_out  = total_panel - scored_n
+    st.markdown(
+        f"The master panel covers **{total_panel} countries** (2000–{max_data_year}). "
+        f"The scoring model evaluates **{scored_n} countries** after applying quality filters:"
+    )
+    cov1, cov2, cov3 = st.columns(3)
+    cov1.metric("Countries in Master Panel", total_panel, "all tracked countries")
+    cov2.metric("Countries Scored", scored_n, f"pass all quality filters")
+    cov3.metric("Filtered Out", filtered_out, "below threshold or missing data")
+    st.caption(
+        "Filters applied: (1) Gold holdings ≥ $500M USD — removes micro-states and territories whose "
+        "reserves are too small to reflect strategic decisions. "
+        "(2) Non-null UN divergence score and sanctions data — countries missing geopolitical data "
+        "cannot be scored on Pillar 3. "
+        "(3) At least 3 years of gold holding history — required for trend and streak calculations."
+    )
 
 
 # ── Footer ────────────────────────────────────────────────────────────────────
