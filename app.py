@@ -1137,7 +1137,8 @@ elif page == "🤖 ML Predictions":
         marker_color=colors,
         text=top10["gold_accumulation_score"].round(1).astype(str),
         textposition="outside",
-        hovertemplate="%{y}<br>Score: %{x:.1f} / 100<extra></extra>"
+        hovertemplate="%{y}<br>Score: %{x:.1f} / 100<extra></extra>",
+        showlegend=False,
     ))
     # Legend via invisible traces (Plotly bar color legend workaround)
     for color, label in [(RED, "🔴 Heavily Sanctioned"), ("#E67E22", "🟠 High Geo Risk"), (BLUE, "🔵 Strong Accumulator")]:
