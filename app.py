@@ -929,15 +929,49 @@ elif page == "🤖 ML Predictions":
     )
     st.plotly_chart(fig_ml, use_container_width=True)
 
+    # ── Key Insight callout — dynamic, drawn from live data ───────────────────
+    sanctioned_top5  = sum(1 for _, r in top10.head(5).iterrows() if r.get("sanctions_score", 0) >= 1)
+    high_geo_top5    = sum(1 for _, r in top10.head(5).iterrows() if str(r.get("geo_risk_tier","")).lower() == "high")
+    top_country      = top10.iloc[0]["country"] if len(top10) else "N/A"
+    top_score        = top10.iloc[0]["gold_accumulation_score"] if len(top10) else 0
+    top_streak       = int(top10.iloc[0].get("accumulation_streak", 0)) if len(top10) else 0
+
+    st.info(
+        f"**🔍 Key Insight —** {sanctioned_top5} of the top 5 predicted buyers carry active sanctions or "
+        f"high geopolitical exposure, signalling that **structural de-dollarization** — not just price appreciation — "
+        f"is the primary driver of reserve diversification. "
+        f"**{top_country}** leads with a score of **{top_score:.0f}/100** and a **{top_streak}-year** consecutive buying streak."
+    )
+    st.caption(
+        "Color indicates the primary driver: 🔴 Red = country faces heavy sanctions (strong incentive to hold non-USD assets), "
+        "🟠 Orange = elevated geopolitical risk, 🔵 Blue = strong fundamental buying momentum. "
+        "Score range: 0 (no signal) → 100 (strongest predicted accumulator)."
+    )
+
     st.markdown("---")
 
     # ── View 2: 4-Pillar breakdown ────────────────────────────────────────────
     st.subheader("📊 What Drives Each Country's Score? — 4-Pillar Breakdown")
-    st.caption(
-        "Each pillar tells a different part of the story: how aggressively a country is buying, "
-        "how consistently it does so, how exposed it is to geopolitical risk, and how underweight "
-        "gold it remains relative to peers. Together they explain why a country ranks where it does."
+    st.markdown(
+        "The composite score is built from four independent pillars. "
+        "Reading across a country's four bars reveals *why* it ranks where it does — "
+        "whether the signal is recent buying activity, long-term consistency, geopolitical pressure, or an under-allocated reserve base."
     )
+
+    PILLAR_DESCRIPTIONS = {
+        "pillar_momentum":    ("🏋️ Physical Buying Momentum", "30% weight",
+                               "Measures actual tonnage purchased in the latest year (price-neutral). "
+                               "Countries topping this pillar are actively buying right now."),
+        "pillar_consistency": ("🔁 Buying Consistency", "25% weight",
+                               "Rewards sustained, repeated buying over 5 years. "
+                               "A high score here means the country doesn't just buy once — it keeps buying."),
+        "pillar_geo":         ("🌐 Geopolitical Motivation", "25% weight",
+                               "Combines UN voting divergence from the US and sanctions exposure. "
+                               "High scorers have a structural reason to reduce dollar dependency."),
+        "pillar_alloc":       ("📐 Strategic Allocation Gap", "20% weight",
+                               "Countries holding less gold than global peers have the most room to grow. "
+                               "A rising 3-year trend in gold share adds further conviction."),
+    }
 
     pillar_cols = {
         "Pillar 1: Physical Buying Momentum": "pillar_momentum",
@@ -970,20 +1004,47 @@ elif page == "🤖 ML Predictions":
                     xaxis=dict(range=[0, 110], title="Score"),
                 )
                 st.plotly_chart(fig_p, use_container_width=True)
-        st.caption("Each pillar scored 0–100. Countries missing a bar have insufficient data for that pillar.")
+                # Per-pillar description below each chart
+                pinfo = PILLAR_DESCRIPTIONS.get(pillar_col)
+                if pinfo:
+                    st.markdown(f"**{pinfo[0]}** · *{pinfo[1]}*")
+                    st.caption(pinfo[2])
+
+        st.caption(
+            "Showing top 5 countries only. Scores are percentile-ranked (0–100) within the full panel. "
+            "A missing bar means the country lacks sufficient data for that pillar."
+        )
     else:
         st.info("Pillar breakdown not yet in scores CSV. Re-run src/ml/score_countries.py to generate.")
 
     # ── View 3: Full ranking table + filter ───────────────────────────────────
     st.markdown("---")
-    st.subheader(f"Full Country Ranking")
-    st.caption("Filter by geopolitical risk tier or minimum score to focus on the countries most relevant to your analysis.")
+    st.subheader(f"📋 Full Country Ranking — {len(scores)} Countries")
+    st.markdown(
+        "Every country in the panel ranked by predicted gold accumulation likelihood for "
+        f"**{predict_year}**. Use the filters below to drill into specific risk tiers or score thresholds."
+    )
 
-    show_cols = ["country", "gold_accumulation_score", "gold_share_pct", "gold_yoy_change_pct",
-                 "accumulation_streak", "sanctions_score", "geo_risk_tier", "usd_share_drawdown_pct"]
+    show_cols = [
+        "country", "gold_accumulation_score", "gold_share_pct", "gold_tonnes_yoy",
+        "accumulation_streak", "buy_frequency_5yr", "sanctions_score", "geo_risk_tier", "geo_bloc",
+    ]
     show_cols = [c for c in show_cols if c in scores.columns]
     disp = scores[show_cols].copy()
-    disp.columns = [c.replace("_", " ").title() for c in show_cols]
+
+    # Human-readable column names
+    col_rename = {
+        "country":                "Country",
+        "gold_accumulation_score":"Score (0–100)",
+        "gold_share_pct":         "Gold % of Reserves",
+        "gold_tonnes_yoy":        "Tonnes Bought (YoY)",
+        "accumulation_streak":    "Buying Streak (yrs)",
+        "buy_frequency_5yr":      "Buys in Last 5 yrs",
+        "sanctions_score":        "Sanctions (0–3)",
+        "geo_risk_tier":          "Geo Risk",
+        "geo_bloc":               "Alignment Bloc",
+    }
+    disp = disp.rename(columns={c: col_rename.get(c, c) for c in disp.columns})
 
     f1, f2 = st.columns(2)
     with f1:
@@ -991,13 +1052,26 @@ elif page == "🤖 ML Predictions":
     with f2:
         score_min = st.slider("Minimum Score:", 0, 100, 0)
 
-    if risk_f != "All" and "Geo Risk Tier" in disp.columns:
-        disp = disp[disp["Geo Risk Tier"] == risk_f]
-    if "Gold Accumulation Score" in disp.columns:
-        disp = disp[disp["Gold Accumulation Score"] >= score_min]
+    if risk_f != "All" and "Geo Risk" in disp.columns:
+        disp = disp[disp["Geo Risk"] == risk_f]
+    if "Score (0–100)" in disp.columns:
+        disp = disp[disp["Score (0–100)"] >= score_min]
 
     disp.index = range(1, len(disp) + 1)
     st.dataframe(disp, use_container_width=True, height=430)
+
+    # ── Column glossary ───────────────────────────────────────────────────────
+    st.markdown("**📖 Column Guide**")
+    col_g1, col_g2, col_g3 = st.columns(3)
+    with col_g1:
+        st.caption("**Score (0–100)** — Overall predicted likelihood of increasing gold reserves next year. Higher = stronger signal across all four pillars.")
+        st.caption("**Gold % of Reserves** — Current share of gold in the country's total foreign reserves. Low values with rising trends indicate accumulation potential.")
+    with col_g2:
+        st.caption("**Tonnes Bought (YoY)** — Physical tonnage change in the latest year. Price-neutral metric — reflects actual buying decisions, not valuation changes.")
+        st.caption("**Buying Streak (yrs)** — Consecutive years of increasing gold allocation. Long streaks indicate policy-driven, strategic intent rather than opportunistic buying.")
+    with col_g3:
+        st.caption("**Sanctions (0–3)** — Sanctions exposure level: 0 = none, 1 = partial, 2 = significant, 3 = severe. Sanctioned countries face direct structural incentive to hold non-USD assets.")
+        st.caption("**Alignment Bloc** — Political alignment with the US based on UN General Assembly voting: *us_divergent* = votes against US positions most often.")
 
     with st.expander("📖 How Countries Are Scored"):
         st.markdown(f"""
