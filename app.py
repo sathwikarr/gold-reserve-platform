@@ -391,35 +391,64 @@ elif page == "📉 Gold vs USD":
         "lower USD share → higher gold share."
     )
 
-    scatter_df = world_trend.dropna(subset=["usd_share", "world_gold_share"])
-    fig_scatter = px.scatter(
-        scatter_df, x="usd_share", y="world_gold_share",
-        text="year",
-        color="year",
-        color_continuous_scale=[[0, "#1A2332"], [0.5, "#4A90D9"], [1, GOLD]],
-        labels={
-            "usd_share": "USD Share of Global Reserves (%)",
-            "world_gold_share": "World Gold Share (%)",
-            "year": "Year"
-        },
-        trendline="ols",
-        trendline_color_override=RED,
-    )
-    fig_scatter.update_traces(
-        selector=dict(mode="markers+text"),
+    scatter_df = world_trend.dropna(subset=["usd_share", "world_gold_share"]).copy()
+
+    # Compute OLS trend line manually with NumPy (no statsmodels dependency)
+    x_vals = scatter_df["usd_share"].values
+    y_vals = scatter_df["world_gold_share"].values
+    m, b   = np.polyfit(x_vals, y_vals, 1)
+    x_line = np.linspace(x_vals.min(), x_vals.max(), 100)
+    y_line = m * x_line + b
+    r      = np.corrcoef(x_vals, y_vals)[0, 1]  # Pearson correlation
+
+    fig_scatter = go.Figure()
+
+    # Scatter dots — color encodes year (ordinal, treated as sequential quantitative)
+    fig_scatter.add_trace(go.Scatter(
+        x=scatter_df["usd_share"],
+        y=scatter_df["world_gold_share"],
+        mode="markers+text",
+        text=scatter_df["year"].astype(str),
         textposition="top center",
         textfont=dict(size=9, color=GREY),
-        marker=dict(size=10)
-    )
+        marker=dict(
+            size=10,
+            color=scatter_df["year"],
+            colorscale=[[0, "#1A2332"], [0.5, BLUE], [1, GOLD]],
+            colorbar=dict(
+                title=dict(text="Year", font=dict(color="white")),
+                tickfont=dict(color="white"),
+                thickness=12
+            ),
+            showscale=True,
+        ),
+        hovertemplate=(
+            "Year %{text}<br>"
+            "USD Share: %{x:.1f}%<br>"
+            "Gold Share: %{y:.2f}%<extra></extra>"
+        ),
+        name="Year",
+    ))
+
+    # Manual OLS trend line
+    fig_scatter.add_trace(go.Scatter(
+        x=x_line, y=y_line,
+        mode="lines",
+        line=dict(color=RED, width=2, dash="dash"),
+        name=f"OLS trend (r = {r:.2f})",
+        hoverinfo="skip",
+    ))
+
     fig_scatter.update_layout(
         **dark_layout(height=440, t=20, b=50),
-        coloraxis_colorbar=dict(
-            title=dict(text="Year", font=dict(color="white")),
-            tickfont=dict(color="white")
-        )
+        xaxis_title="USD Share of Global Reserves (%)",
+        yaxis_title="World Gold Share (%)",
     )
     st.plotly_chart(fig_scatter, use_container_width=True)
-    st.caption("Red trend line shows the inverse relationship: as USD share falls, world gold share rises.")
+    st.caption(
+        f"Red dashed line = OLS trend (r = {r:.2f}). "
+        "Negative correlation confirms: as USD share falls, world gold share rises."
+    )
 
     st.markdown("---")
 
