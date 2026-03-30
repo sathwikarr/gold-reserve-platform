@@ -89,9 +89,9 @@ if page == "🌍 Overview":
     col_a, col_b = st.columns(2)
 
     with col_a:
-        st.subheader("🏆 Top 10 Gold Holders (2023)")
+        st.subheader(f"🏆 Top 10 Gold Holders ({latest_year})")
         top_holders = (
-            df[df.year == 2023]
+            latest
             .nlargest(10, "gold_value_usd")
             [["country", "gold_value_usd", "gold_share_pct"]]
             .dropna()
@@ -138,14 +138,69 @@ if page == "🌍 Overview":
 
     # Chart images
     st.markdown("---")
-    st.subheader("📈 Key Charts")
-    img_col1, img_col2 = st.columns(2)
-    with img_col1:
-        if (DOCS / "top10_gold_holders.png").exists():
-            st.image(str(DOCS / "top10_gold_holders.png"), caption="Top 10 Gold Holders", use_container_width=True)
-    with img_col2:
-        if (DOCS / "accumulation_heatmap.png").exists():
-            st.image(str(DOCS / "accumulation_heatmap.png"), caption="Accumulation Heatmap by Country", use_container_width=True)
+    st.subheader(f"🗺️ World Gold Reserve Map ({latest_year})")
+    try:
+        import plotly.express as px
+        map_df = latest[["country", "country_code", "gold_share_pct", "gold_value_usd",
+                         "accumulation_streak", "geo_risk_tier"]].dropna(subset=["gold_share_pct"]).copy()
+        map_df["gold_bn"] = (map_df["gold_value_usd"] / 1e9).round(1)
+        map_df["hover"] = (
+            map_df["country"] + "<br>" +
+            "Gold Share: " + map_df["gold_share_pct"].round(1).astype(str) + "%<br>" +
+            "Gold Value: $" + map_df["gold_bn"].astype(str) + "B<br>" +
+            "Buying Streak: " + map_df["accumulation_streak"].fillna(0).astype(int).astype(str) + " yrs"
+        )
+        fig_map = px.choropleth(
+            map_df,
+            locations="country_code",
+            color="gold_share_pct",
+            hover_name="country",
+            custom_data=["hover"],
+            color_continuous_scale=[[0,"#1A2332"],[0.3,"#7B5E00"],[0.6,"#C8960C"],[1,"#FFD700"]],
+            range_color=[0, map_df["gold_share_pct"].quantile(0.95)],
+            labels={"gold_share_pct": "Gold Share (%)"},
+            title=f"Gold as % of Total Reserves by Country ({latest_year})"
+        )
+        fig_map.update_traces(hovertemplate="%{customdata[0]}<extra></extra>")
+        fig_map.update_layout(
+            geo=dict(bgcolor="#0D1117", showframe=False, showcoastlines=True,
+                     coastlinecolor="#2A3548", landcolor="#1A2332", showocean=True,
+                     oceancolor="#0D1117"),
+            paper_bgcolor="#0D1117", font=dict(color="white"),
+            height=480, margin=dict(t=40, b=10, l=10, r=10),
+            coloraxis_colorbar=dict(title="Gold %", tickfont=dict(color="white"),
+                                    titlefont=dict(color="white"))
+        )
+        st.plotly_chart(fig_map, use_container_width=True)
+        st.caption("Darker gold = higher share of reserves held in gold. Hover over any country for details.")
+    except Exception as e:
+        st.info(f"Map unavailable: {e}")
+
+    st.markdown("---")
+    st.subheader("📈 Accumulation Heatmap (Top 20 Countries, 2015–2025)")
+    try:
+        import plotly.graph_objects as go
+        top20 = latest.nlargest(20, "gold_value_usd")["country"].tolist()
+        heat_df = df[(df["country"].isin(top20)) & (df["year"] >= 2015)].pivot_table(
+            index="country", columns="year", values="gold_share_pct"
+        ).round(1)
+        fig_heat = go.Figure(go.Heatmap(
+            z=heat_df.values.tolist(),
+            x=[str(y) for y in heat_df.columns.tolist()],
+            y=heat_df.index.tolist(),
+            colorscale=[[0,"#1A2332"],[0.4,"#7B5E00"],[1,"#FFD700"]],
+            hoverongaps=False,
+            hovertemplate="%{y}<br>%{x}: %{z:.1f}%<extra></extra>",
+            colorbar=dict(title="Gold %", tickfont=dict(color="white"), titlefont=dict(color="white"))
+        ))
+        fig_heat.update_layout(
+            paper_bgcolor="#0D1117", plot_bgcolor="#0D1117",
+            font=dict(color="white"), height=500,
+            xaxis=dict(side="bottom"), margin=dict(t=20, b=40)
+        )
+        st.plotly_chart(fig_heat, use_container_width=True)
+    except Exception as e:
+        st.info(f"Heatmap unavailable: {e}")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PAGE 2 — GOLD vs USD
@@ -363,19 +418,142 @@ elif page == "🌐 Geopolitics":
 elif page == "📰 Sentiment":
     st.title("📰 NLP Narrative Analysis")
     st.markdown("""
-    Financial news articles (sourced via GDELT) were processed to extract **USD sentiment**, **gold buying signals**,
-    and **de-dollarization mentions** by country and year. This NLP layer captures the *narrative environment*
-    driving central bank gold decisions.
+    Financial news about gold, de-dollarization and USD dominance — pulled **live from GDELT**
+    and scored with keyword-based sentiment analysis. Shows the *narrative environment* driving
+    central bank gold decisions.
     """)
 
-    # Global USD sentiment trend
+    # ── Live GDELT news feed ──────────────────────────────────────────────────
+    import requests, re
+    from datetime import datetime
+
+    GDELT_QUERIES = {
+        "🏦 Central Bank Gold Buying":  "central+bank+gold+reserves+buying",
+        "💵 De-Dollarization":          "de-dollarization+dollar+reserves",
+        "⚠️  Sanctions & Gold":         "sanctions+gold+reserves+central+bank",
+    }
+
+    POSITIVE_WORDS = ["buy","bought","purchase","increase","boost","surge","rise","accumulate","add","growing"]
+    NEGATIVE_WORDS = ["sell","sold","decline","fall","drop","reduce","cut","weak","concern","risk"]
+    GOLD_WORDS     = ["gold","reserve","bullion","tonne","troy"]
+    USD_NEG_WORDS  = ["dedollar","de-dollar","dollar decline","dollar weakness","away from dollar","bypass dollar"]
+
+    def score_sentiment(text):
+        t = text.lower()
+        pos = sum(1 for w in POSITIVE_WORDS if w in t)
+        neg = sum(1 for w in NEGATIVE_WORDS if w in t)
+        gold = sum(1 for w in GOLD_WORDS if w in t)
+        usd_neg = sum(1 for w in USD_NEG_WORDS if w in t)
+        score = (pos - neg) / max(pos + neg, 1)
+        return round(score, 2), gold, usd_neg
+
+    @st.cache_data(ttl=3600)  # cache 1 hour
+    def fetch_gdelt_news(query, max_records=10):
+        url = (
+            f"https://api.gdeltproject.org/api/v2/doc/doc"
+            f"?query={query}&mode=artlist&maxrecords={max_records}"
+            f"&format=json&sort=DateDesc&timespan=48h"
+        )
+        try:
+            r = requests.get(url, timeout=10)
+            if r.status_code == 200:
+                data = r.json()
+                return data.get("articles", [])
+        except Exception:
+            pass
+        return []
+
+    st.subheader("📡 Live News Feed (Last 48 Hours)")
+    st.caption("Sourced from GDELT — updates every hour · Scored with keyword sentiment")
+
+    tab_labels = list(GDELT_QUERIES.keys())
+    tabs = st.tabs(tab_labels)
+
+    all_articles = []
+    for tab, (label, query) in zip(tabs, GDELT_QUERIES.items()):
+        with tab:
+            with st.spinner(f"Fetching latest {label} news..."):
+                articles = fetch_gdelt_news(query, max_records=12)
+
+            if not articles:
+                st.info("No articles found in last 48h — GDELT may be rate-limiting. Try again in a moment.")
+            else:
+                for art in articles:
+                    title   = art.get("title", "No title")
+                    url_art = art.get("url", "#")
+                    source  = art.get("domain", "Unknown")
+                    seendate = art.get("seendate", "")
+                    # Parse date
+                    try:
+                        dt = datetime.strptime(seendate[:8], "%Y%m%d").strftime("%b %d")
+                    except Exception:
+                        dt = seendate[:10]
+
+                    score, gold_hits, usd_neg_hits = score_sentiment(title)
+
+                    # Sentiment badge
+                    if score > 0.1:
+                        badge = "🟢 Bullish"
+                    elif score < -0.1:
+                        badge = "🔴 Bearish"
+                    else:
+                        badge = "⚪ Neutral"
+
+                    st.markdown(
+                        f"**[{title}]({url_art})**  
+"
+                        f"📰 {source} · 📅 {dt} · {badge}"
+                        + (f" · 🥇 Gold signal: {gold_hits}" if gold_hits > 0 else "")
+                        + (f" · 💵 De-$ signal: {usd_neg_hits}" if usd_neg_hits > 0 else "")
+                    )
+                    st.divider()
+
+                    all_articles.append({"title": title, "source": source,
+                                        "score": score, "gold_hits": gold_hits,
+                                        "usd_neg": usd_neg_hits, "query": label})
+
+    # ── Sentiment summary from live articles ─────────────────────────────────
+    if all_articles:
+        st.markdown("---")
+        st.subheader("📊 Sentiment Summary — Live Articles")
+        import plotly.graph_objects as go
+
+        art_df = pd.DataFrame(all_articles)
+        avg_score = art_df["score"].mean()
+        bullish = (art_df["score"] > 0.1).sum()
+        bearish = (art_df["score"] < -0.1).sum()
+        neutral = len(art_df) - bullish - bearish
+
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("📰 Articles Fetched", len(art_df))
+        m2.metric("🟢 Bullish", bullish)
+        m3.metric("🔴 Bearish", bearish)
+        m4.metric("📈 Avg Sentiment", f"{avg_score:+.2f}")
+
+        # Score distribution
+        fig_sent = go.Figure(go.Bar(
+            x=["Bullish 🟢", "Neutral ⚪", "Bearish 🔴"],
+            y=[bullish, neutral, bearish],
+            marker_color=["#2ECC71", "#95A5A6", "#E74C3C"],
+        ))
+        fig_sent.update_layout(
+            title="Sentiment Distribution of Live Gold/USD News",
+            plot_bgcolor="#0E1117", paper_bgcolor="#0E1117",
+            font=dict(color="white"), height=300,
+            margin=dict(t=40, b=20)
+        )
+        st.plotly_chart(fig_sent, use_container_width=True)
+
+    st.markdown("---")
+
+    # ── Historical NLP trend (from stored panel) ──────────────────────────────
+    st.subheader("📈 Historical USD Sentiment Trend (2000–2025)")
     nlp_global = df.groupby("year").agg(
         usd_neg=("global_usd_negative_pct", "first"),
         usd_pos=("global_usd_positive_pct", "first"),
-        articles=("global_usd_article_count", "first"),
     ).reset_index().dropna()
 
-    try:
+    if len(nlp_global) > 0:
         import plotly.graph_objects as go
         fig = go.Figure()
         fig.add_trace(go.Scatter(
@@ -390,89 +568,27 @@ elif page == "📰 Sentiment":
             line=dict(color="#2ECC71", width=2)
         ))
         fig.update_layout(
-            title="Global USD Sentiment in Financial News (2000–2025)",
             xaxis_title="Year", yaxis_title="% of Articles",
             plot_bgcolor="#0E1117", paper_bgcolor="#0E1117",
-            font=dict(color="white"), height=380,
+            font=dict(color="white"), height=350,
             legend=dict(orientation="h", y=1.1)
         )
         st.plotly_chart(fig, use_container_width=True)
-    except ImportError:
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots(figsize=(12, 5))
-        ax.fill_between(nlp_global["year"], nlp_global["usd_neg"], alpha=0.3, color="red")
-        ax.plot(nlp_global["year"], nlp_global["usd_neg"], color="red", label="Negative USD %")
-        ax.plot(nlp_global["year"], nlp_global["usd_pos"], color="green", label="Positive USD %")
-        ax.set_xlabel("Year"); ax.set_ylabel("% Articles"); ax.legend(); st.pyplot(fig)
-
-    st.markdown("---")
-
-    # Country NLP signals
-    st.subheader("Country-Level NLP Signals (2023)")
-    nlp_2023 = df[df.year == 2023][
-        ["country", "nlp_gold_positive", "nlp_gold_negative", "nlp_usd_negative",
-         "nlp_dedollar_mentions", "nlp_composite_signal", "nlp_article_count"]
-    ].dropna(subset=["nlp_composite_signal"]).sort_values("nlp_composite_signal", ascending=False)
-
-    nlp_2023 = nlp_2023[nlp_2023["nlp_article_count"] > 0]
-
-    if len(nlp_2023) > 0:
-        try:
-            import plotly.express as px
-            fig = px.bar(
-                nlp_2023.head(20),
-                x="nlp_composite_signal", y="country",
-                orientation="h",
-                color="nlp_composite_signal",
-                color_continuous_scale="RdYlGn",
-                labels={"nlp_composite_signal": "NLP Composite Signal", "country": "Country"},
-                title="Top Countries by NLP Gold/De-dollarization Signal (2023)"
-            )
-            fig.update_layout(
-                plot_bgcolor="#0E1117", paper_bgcolor="#0E1117",
-                font=dict(color="white"), height=450,
-                yaxis=dict(autorange="reversed")
-            )
-            st.plotly_chart(fig, use_container_width=True)
-        except ImportError:
-            import matplotlib.pyplot as plt
-            top_nlp = nlp_2023.head(15)
-            fig, ax = plt.subplots(figsize=(10, 6))
-            ax.barh(top_nlp["country"], top_nlp["nlp_composite_signal"])
-            ax.set_xlabel("NLP Composite Signal"); ax.invert_yaxis(); st.pyplot(fig)
-
-        st.markdown("**Full NLP table:**")
-        display_nlp = nlp_2023.copy()
-        display_nlp.columns = ["Country", "Gold Positive", "Gold Negative", "USD Negative",
-                                "De-Dollar Mentions", "Composite Signal", "Articles"]
-        display_nlp.index = range(1, len(display_nlp) + 1)
-        st.dataframe(display_nlp.head(30), use_container_width=True)
     else:
-        st.info("NLP article data is based on seeded articles (GDELT was unavailable in training environment). "
-                "Connect a NewsAPI or GDELT key to enrich this layer.")
+        st.info("Historical NLP data not available for this period.")
 
-    # NLP methodology
-    st.markdown("---")
-    with st.expander("📖 NLP Methodology"):
+    with st.expander("📖 How This Works"):
         st.markdown("""
-        **Data Source:** GDELT Document API (fallback: 135 seeded financial news articles)
+        **Live data:** GDELT Document API (free, no key required) — fetches articles from last 48 hours
+        matching queries for *central bank gold*, *de-dollarization*, and *sanctions + gold*.
 
-        **Sentiment Model:** FinBERT (HuggingFace) → fallback: FinancialKeywordSentiment (custom keyword scorer)
+        **Sentiment scoring:** Keyword-based scorer counting bullish/bearish financial terms.
+        Production upgrade: swap for FinBERT (HuggingFace) for deeper sentence-level analysis.
 
-        **Features Extracted per Country-Year:**
-        - `nlp_gold_positive` — % articles mentioning gold positively
-        - `nlp_gold_negative` — % articles mentioning gold negatively
-        - `nlp_usd_positive / negative` — USD sentiment signals
-        - `nlp_dedollar_mentions` — explicit de-dollarization language count
-        - `nlp_composite_signal` — weighted aggregate signal (0–100)
-        - `nlp_avg_sentiment_score` — mean FinBERT score per country
-
-        **Global signals** (aggregated from all countries per year):
-        - `global_usd_negative_pct` — % of USD-related articles with negative tone
-        - `global_usd_positive_pct` — % positive
+        **GDELT** indexes ~100,000 news articles per day from 65 languages and 200+ countries.
+        It is one of the largest open news intelligence datasets in the world.
         """)
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # PAGE 5 — ML PREDICTIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 elif page == "🤖 ML Predictions":
