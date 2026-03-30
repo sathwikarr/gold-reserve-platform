@@ -1141,7 +1141,7 @@ elif page == "🤖 ML Predictions":
         showlegend=False,
     ))
     # Legend via invisible traces (Plotly bar color legend workaround)
-    for color, label in [(RED, "🔴 Heavily Sanctioned"), ("#E67E22", "🟠 High Geo Risk"), (BLUE, "🔵 Strong Accumulator")]:
+    for color, label in [(RED, "Heavily Sanctioned"), ("#E67E22", "High Geo Risk"), (BLUE, "Strong Accumulator")]:
         fig_ml.add_trace(go.Scatter(
             x=[None], y=[None], mode="markers",
             marker=dict(color=color, size=10, symbol="square"),
