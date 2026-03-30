@@ -63,11 +63,11 @@ latest_year = int(df["year"].max())
 latest      = df[df.year == latest_year]
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
-st.sidebar.image(
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d8/Gold_Bars.jpg/320px-Gold_Bars.jpg",
-    use_container_width=True
+st.sidebar.markdown(
+    "<div style='text-align:center; padding: 12px 0 4px 0; font-size: 2.6rem;'>🏅</div>"
+    "<div style='text-align:center; font-size: 1.25rem; font-weight: 700; letter-spacing: 0.5px;'>Gold Intelligence</div>",
+    unsafe_allow_html=True,
 )
-st.sidebar.title("🏅 Gold Intelligence")
 st.sidebar.markdown("---")
 
 page = st.sidebar.radio(
