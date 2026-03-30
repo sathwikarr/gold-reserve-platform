@@ -728,24 +728,63 @@ elif page == "📰 Sentiment":
     }
 
     # Bullish = positive signal for gold accumulation
+    # Bullish signals for gold — unambiguous buying/demand language
+    # Multi-word phrases used for context-sensitive cases (e.g. dollar weakness, rate cuts)
     POSITIVE_WORDS = [
-        "buy", "bought", "purchase", "purchases", "increase", "increased", "boost",
-        "surge", "surges", "surged", "rise", "rises", "rose", "accumulate", "accumulates",
-        "add", "adds", "growing", "grows", "record", "records", "highest", "strong",
-        "demand", "inflow", "hike", "rally", "rallies", "gain", "gains", "jump", "jumps",
-        "jumped", "climb", "climbs", "soar", "soars", "soared", "expand", "expands",
-        "positive", "rebound", "recovery", "top", "peak", "all-time",
+        # Direct gold buying/demand
+        "buy", "bought", "purchase", "purchases", "buying",
+        "increase", "increased", "increases", "boost", "boosted",
+        "surge", "surged", "surging",
+        "rise", "rises", "rose", "rising",
+        "accumulate", "accumulated", "accumulation",
+        "add", "adds", "added",
+        "demand", "inflow", "inflows",
+        "rally", "rallied",
+        "gain", "gains", "gained",
+        "jump", "jumped",
+        "climb", "climbed",
+        "soar", "soared", "soaring",
+        "rebound", "rebounded",
+        # Safe-haven / geopolitical drivers (always bullish for gold)
+        "safe haven", "safe-haven",
+        "hedge", "hedging",
+        "geopolitical", "uncertainty", "conflict",
+        "sanction", "sanctions",
+        "de-dollarization", "dedollarization", "dedollar",
+        "diversif",        # matches diversify/diversification
+        "stockpile", "hoard",
+        # Dollar weakness phrases (dollar falling = gold bullish)
+        "dollar weakness", "dollar falls", "dollar drops", "dollar declines",
+        "dollar slump", "weaker dollar", "weak dollar", "dollar loses",
+        "dollar sell", "dollar tumble", "dollar at risk",
+        "de-dollar", "away from dollar", "bypass dollar", "dump dollar",
+        # Monetary easing = gold bullish
+        "rate cut", "rate cuts", "interest rate cut", "easing",
+        "lower rates", "quantitative easing",
     ]
-    # Bearish = negative signal for gold / positive for USD
+    # Bearish signals for gold — unambiguous selling/decline language
     NEGATIVE_WORDS = [
-        "sell", "sold", "selling", "decline", "declines", "declined", "fall", "falls",
-        "fell", "drop", "drops", "dropped", "reduce", "reduces", "reduced", "cut", "cuts",
-        "weak", "weakness", "loss", "losses", "outflow", "plunge", "plunges", "plunged",
-        "slump", "slumps", "crash", "tumble", "tumbles", "lower", "bearish", "shrink",
-        "shrinks", "retreat", "retreats",
+        # Direct gold selling/decline
+        "sell", "sold", "selling",
+        "decline", "declined", "declining", "declines",
+        "drop", "drops", "dropped", "dropping",
+        "reduce", "reduces", "reduced", "reducing",
+        "outflow", "outflows",
+        "plunge", "plunged", "plunging",
+        "slump", "slumped",
+        "crash", "crashed",
+        "tumble", "tumbled",
+        "retreat", "retreated",
+        "shrink", "shrinks",
+        "bearish",
+        # Dollar strength phrases (strong dollar = gold bearish)
+        "dollar strength", "dollar rallies", "dollar surges", "strong dollar",
+        "dollar gains", "dollar rises", "dollar at high",
+        # Monetary tightening = gold bearish
+        "rate hike", "rate hikes", "interest rate hike", "tightening", "hawkish",
     ]
     GOLD_WORDS    = ["gold", "reserve", "bullion", "tonne", "troy", "precious metal"]
-    USD_NEG_WORDS = ["dedollar", "de-dollar", "dollar decline", "dollar weakness",
+    USD_NEG_WORDS = ["de-dollar", "dedollar", "dollar decline", "dollar weakness",
                      "away from dollar", "bypass dollar", "dollar dominance fades",
                      "ditch dollar", "dump dollar", "dollar crisis"]
 
@@ -755,15 +794,14 @@ elif page == "📰 Sentiment":
         neg  = sum(1 for w in NEGATIVE_WORDS if w in t)
         gold = sum(1 for w in GOLD_WORDS if w in t)
         usd  = sum(1 for w in USD_NEG_WORDS if w in t)
-        # Net score: positive = bullish, negative = bearish
-        # Avoid cancellation: use net difference, not ratio (ratio collapses ties to 0)
+        # Net score: positive = bullish for gold, negative = bearish
         net = pos - neg
         if net > 0:
-            score = min(1.0, 0.2 + net * 0.15)     # bullish
+            score = min(1.0,  0.2 + net * 0.15)
         elif net < 0:
-            score = max(-1.0, -0.2 + net * 0.15)   # bearish
+            score = max(-1.0, -0.2 + net * 0.15)
         else:
-            # Tie or no keywords — use gold context: gold-buying news defaults slightly bullish
+            # Tie / no keywords — gold-context headlines default slightly bullish
             score = 0.15 if gold > 0 else 0.0
         return round(score, 2), gold, usd
 
