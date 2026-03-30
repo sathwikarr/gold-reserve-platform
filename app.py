@@ -940,10 +940,10 @@ elif page == "🤖 ML Predictions":
     )
 
     pillar_cols = {
-        "Pillar 1: Physical Buying Momentum": "p1_momentum",
-        "Pillar 2: Buying Consistency":       "p2_consistency",
-        "Pillar 3: Geopolitical Motivation":  "p3_geopolitical",
-        "Pillar 4: Strategic Allocation Gap": "p4_allocation",
+        "Pillar 1: Physical Buying Momentum": "pillar_momentum",
+        "Pillar 2: Buying Consistency":       "pillar_consistency",
+        "Pillar 3: Geopolitical Motivation":  "pillar_geo",
+        "Pillar 4: Strategic Allocation Gap": "pillar_alloc",
     }
 
     available_pillars = {k: v for k, v in pillar_cols.items() if v in scores.columns}
