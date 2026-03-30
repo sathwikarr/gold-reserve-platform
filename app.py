@@ -1148,7 +1148,7 @@ elif page == "🤖 ML Predictions":
             name=label, showlegend=True
         ))
     fig_ml.update_layout(
-        **dark_layout(height=430, t=30, b=50),
+        **dark_layout(height=430, t=30, b=50, legend_h=False),
         title=f"Top 10 Countries Predicted to Increase Gold Reserves in {predict_year}",
         xaxis_title="Gold Accumulation Score (0–100)",
         xaxis=dict(range=[0, 125]),
