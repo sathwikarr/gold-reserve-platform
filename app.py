@@ -679,23 +679,80 @@ elif page == "📰 Sentiment":
         score = (pos - neg) / max(pos + neg, 1)
         return round(score, 2), gold, usd
 
-    @st.cache_data(ttl=3600)
-    def fetch_gdelt_news(query, max_records=10):
-        url = (
-            f"https://api.gdeltproject.org/api/v2/doc/doc"
-            f"?query={query}&mode=artlist&maxrecords={max_records}"
-            f"&format=json&sort=DateDesc&timespan=48h"
-        )
-        try:
-            r = requests.get(url, timeout=10)
-            if r.status_code == 200:
-                return r.json().get("articles", [])
-        except Exception:
-            pass
-        return []
+    # RSS fallback feeds — used when GDELT returns nothing
+    RSS_FEEDS = {
+        "🏦 Central Bank Gold Buying": [
+            "https://feeds.content.dowjones.io/public/rss/mw_realtimeheadlines",
+            "https://www.ft.com/rss/home/uk",
+        ],
+        "💵 De-Dollarization": [
+            "https://rss.nytimes.com/services/xml/rss/nyt/Economy.xml",
+            "https://feeds.content.dowjones.io/public/rss/mw_realtimeheadlines",
+        ],
+        "⚠️  Sanctions & Gold": [
+            "https://feeds.content.dowjones.io/public/rss/mw_realtimeheadlines",
+        ],
+    }
 
-    st.subheader("📡 Live News Feed (Last 48 Hours)")
-    st.caption("Sourced from GDELT — updates every hour · Scored with keyword sentiment")
+    @st.cache_data(ttl=3600)
+    def fetch_gdelt_news(query, max_records=12):
+        """
+        Tries GDELT with decreasing timespan windows.
+        Falls back gracefully — never crashes the page.
+        """
+        # GDELT v2 wants spaces as %20, not +, inside the query value
+        import urllib.parse
+        encoded = urllib.parse.quote(query.replace("+", " "))
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; GoldPlatform/1.0)"}
+
+        for timespan in ("48h", "1week", "2week"):
+            url = (
+                f"https://api.gdeltproject.org/api/v2/doc/doc"
+                f"?query={encoded}&mode=artlist&maxrecords={max_records}"
+                f"&format=json&sort=DateDesc&timespan={timespan}"
+            )
+            try:
+                r = requests.get(url, timeout=12, headers=headers)
+                if r.status_code != 200:
+                    continue
+                ct = r.headers.get("content-type", "")
+                if "json" not in ct and not r.text.strip().startswith("{"):
+                    continue          # got HTML error page, try next timespan
+                data = r.json()
+                articles = data.get("articles") or []
+                if articles:
+                    return articles, timespan
+            except Exception:
+                continue
+        return [], None
+
+    @st.cache_data(ttl=1800)
+    def fetch_rss_articles(label):
+        """Parse RSS as a fallback news source."""
+        import xml.etree.ElementTree as ET
+        results = []
+        for feed_url in RSS_FEEDS.get(label, []):
+            try:
+                r = requests.get(feed_url, timeout=10,
+                                 headers={"User-Agent": "Mozilla/5.0"})
+                root = ET.fromstring(r.content)
+                for item in root.iter("item"):
+                    title_el = item.find("title")
+                    link_el  = item.find("link")
+                    date_el  = item.find("pubDate")
+                    if title_el is not None and title_el.text:
+                        results.append({
+                            "title":    title_el.text.strip(),
+                            "url":      link_el.text.strip() if link_el is not None else "#",
+                            "domain":   feed_url.split("/")[2],
+                            "seendate": (date_el.text or "")[:25] if date_el is not None else "",
+                        })
+            except Exception:
+                continue
+        return results[:12]
+
+    st.subheader("📡 Live News Feed")
+    st.caption("Primary source: GDELT (last 2 weeks) · Fallback: financial RSS feeds · Updates every hour")
 
     tabs = st.tabs(list(GDELT_QUERIES.keys()))
     all_articles = []
@@ -703,20 +760,34 @@ elif page == "📰 Sentiment":
     for tab, (label, query) in zip(tabs, GDELT_QUERIES.items()):
         with tab:
             with st.spinner(f"Fetching latest {label} news..."):
-                articles = fetch_gdelt_news(query, max_records=12)
+                articles, used_timespan = fetch_gdelt_news(query, max_records=12)
 
             if not articles:
-                st.info("No articles found in last 48h — GDELT may be rate-limiting. Try again shortly.")
+                # Try RSS fallback
+                articles = fetch_rss_articles(label)
+                if articles:
+                    st.caption("📡 Showing RSS feed fallback (GDELT unavailable right now)")
+                else:
+                    st.warning(
+                        "No live articles found. GDELT may be temporarily unavailable. "
+                        "The historical sentiment analysis below is unaffected."
+                    )
             else:
-                for art in articles:
+                st.caption(f"📡 GDELT — showing results from last {used_timespan}")
+
+            for art in articles:
                     title    = art.get("title", "No title")
                     url_art  = art.get("url", "#")
                     source   = art.get("domain", "Unknown")
                     seendate = art.get("seendate", "")
-                    try:
-                        dt = datetime.strptime(seendate[:8], "%Y%m%d").strftime("%b %d")
-                    except Exception:
-                        dt = seendate[:10]
+                    dt = seendate[:10]  # fallback
+                    for fmt in ("%Y%m%d%H%M%S", "%Y%m%d",
+                                "%a, %d %b %Y %H:%M:%S %z", "%a, %d %b %Y %H:%M:%S %Z"):
+                        try:
+                            dt = datetime.strptime(seendate[:len(fmt)], fmt).strftime("%b %d")
+                            break
+                        except Exception:
+                            continue
 
                     score, gold_hits, usd_neg_hits = score_sentiment(title)
                     badge = "🟢 Bullish" if score > 0.1 else ("🔴 Bearish" if score < -0.1 else "⚪ Neutral")
