@@ -500,8 +500,7 @@ elif page == "📰 Sentiment":
                         badge = "⚪ Neutral"
 
                     st.markdown(
-                        f"**[{title}]({url_art})**  
-"
+                        f"**[{title}]({url_art})**  \n"
                         f"📰 {source} · 📅 {dt} · {badge}"
                         + (f" · 🥇 Gold signal: {gold_hits}" if gold_hits > 0 else "")
                         + (f" · 💵 De-$ signal: {usd_neg_hits}" if usd_neg_hits > 0 else "")
