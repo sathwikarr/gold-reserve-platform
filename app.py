@@ -13,7 +13,6 @@ Run:
 import streamlit as st
 import pandas as pd
 import numpy as np
-import os
 from pathlib import Path
 
 # ── Page config ──────────────────────────────────────────────────────────────
@@ -91,7 +90,7 @@ if page == "🌍 Overview":
     st.markdown(
         "> *Are countries increasing gold reserves due to declining trust in the US dollar "
         "and rising geopolitical risk?*\n\n"
-        "This platform tracks gold reserve shifts across **93 central banks** from 2000 to 2025, "
+        f"This platform tracks gold reserve shifts across **{df['country'].nunique()} central banks** from 2000 to {latest_year}, "
         "revealing how macroeconomic stress, sanctions pressure, and geopolitical realignment "
         "are reshaping the global reserve landscape."
     )
@@ -183,7 +182,7 @@ if page == "🌍 Overview":
         events = [
             (2008, "GFC"), (2011, "EU Debt Crisis"),
             (2014, "Crimea"), (2020, "COVID"),
-            (2022, "Russia\nSanctions"), (2023, "US Rates Peak")
+            (2022, "Russia<br>Sanctions"), (2023, "US Rates Peak")
         ]
         for yr, label in events:
             row = accum_yr[accum_yr.year == yr]
@@ -261,7 +260,6 @@ if page == "🌍 Overview":
             st.plotly_chart(fig_map, use_container_width=True)
             # Dynamic geographic insight
             high_share = map_df[map_df["gold_share_pct"] >= 30]
-            top_region_countries = high_share["country"].tolist()
             st.caption(
                 f"**{len(high_share)} countries** hold more than 30% of their reserves in gold — "
                 f"a threshold that signals deliberate de-dollarization strategy rather than passive allocation. "
@@ -307,13 +305,14 @@ if page == "🌍 Overview":
             )
             st.plotly_chart(fig_heat, use_container_width=True)
             # Dynamic heatmap insight — find brightening rows (countries with rising share)
-            if latest_year in heat_df.columns and (latest_year - 3) in heat_df.columns:
-                heat_df["delta"] = heat_df[latest_year] - heat_df[latest_year - 3]
+            base_year = latest_year - 3
+            if latest_year in heat_df.columns and base_year in heat_df.columns:
+                heat_df["delta"] = heat_df[latest_year] - heat_df[base_year]
                 risers  = heat_df[heat_df["delta"] > 2].index.tolist()
                 fallers = heat_df[heat_df["delta"] < -2].index.tolist()
                 if risers:
                     st.caption(
-                        f"**Rising (brightening rows — increased gold share 2021→{latest_year}):** "
+                        f"**Rising (brightening rows — increased gold share {base_year}→{latest_year}):** "
                         f"{', '.join(risers[:5])}{'…' if len(risers) > 5 else ''}. "
                         + (f"**Declining:** {', '.join(fallers[:3])}." if fallers else "No major declines.")
                     )
@@ -330,7 +329,7 @@ elif page == "📉 Gold vs USD":
     )
 
     world_trend = df.groupby("year").agg(
-        usd_share=("usd_share_of_reserves_pct", "mean"),
+        usd_share=("usd_share_of_reserves_pct", "first"),   # global constant — same for all rows in a year
         world_gold_share=("world_gold_share_pct", "first"),
         world_gold_bn=("world_gold_value_bn", "first"),
     ).reset_index().dropna()
@@ -522,12 +521,18 @@ elif page == "🌐 Geopolitics":
     div_streak = geo_df[geo_df.geo_bloc == "us_divergent"]["accumulation_streak"].mean()
     all_streak = geo_df["accumulation_streak"].mean()
 
+    # Guard against NaN (e.g. no sanctioned countries in panel)
+    sanc2_avg  = sanc2_avg  if not pd.isna(sanc2_avg)  else 0.0
+    sanc0_avg  = sanc0_avg  if not pd.isna(sanc0_avg)  else 0.0
+    div_streak = div_streak if not pd.isna(div_streak) else 0.0
+    all_streak = all_streak if not pd.isna(all_streak) else 0.0
+
     col1.metric("Heavily Sanctioned Avg Gold Share",
                 f"{sanc2_avg:.1f}%",
-                f"+{sanc2_avg - sanc0_avg:.1f}pp vs non-sanctioned")
+                f"{sanc2_avg - sanc0_avg:+.1f}pp vs non-sanctioned")
     col2.metric("US-Divergent Avg Buying Streak",
                 f"{div_streak:.1f} yrs",
-                f"+{div_streak - all_streak:.1f}yr vs panel avg")
+                f"{div_streak - all_streak:+.1f}yr vs panel avg")
     col3.metric("Countries w/ Any Sanctions",
                 f"{int((geo_df.sanctions_score >= 1).sum())}",
                 f"out of {len(geo_df)} in panel")
@@ -573,10 +578,11 @@ elif page == "🌐 Geopolitics":
             yaxis=dict(range=[0, sanc_group["avg_gold"].max() * 1.35])
         )
         st.plotly_chart(fig_sanc, use_container_width=True)
+        multiplier = f"{sanc2_avg / sanc0_avg:.1f}×" if sanc0_avg > 0 else "significantly higher"
         st.info(
             f"**Key Finding:** Countries under significant sanctions hold an average of "
             f"**{sanc2_avg:.1f}%** of reserves in gold — "
-            f"**{sanc2_avg/sanc0_avg:.1f}×** the {sanc0_avg:.1f}% baseline for non-sanctioned countries. "
+            f"**{multiplier}** the {sanc0_avg:.1f}% baseline for non-sanctioned countries. "
             "This is the single strongest structural predictor of gold accumulation in the model. "
             "When a country cannot rely on dollar-denominated assets being accessible, gold becomes the default safe haven."
         )
@@ -606,13 +612,19 @@ elif page == "🌐 Geopolitics":
         }
         scatter_geo["color"] = scatter_geo["geo_bloc"].map(bloc_colors).fillna(GREY)
 
+        bloc_labels = {
+            "us_divergent": "🔴 US-Divergent",
+            "neutral":      "🟡 Neutral",
+            "US_allied":    "🔵 US-Allied",
+            "ally":         "🔵 US-Allied",
+        }
         fig_geo = go.Figure()
         for bloc, grp in scatter_geo.groupby("geo_bloc"):
             fig_geo.add_trace(go.Scatter(
                 x=grp["un_alignment_score"],
                 y=grp["gold_share_pct"],
                 mode="markers",
-                name=bloc,
+                name=bloc_labels.get(bloc, bloc),
                 marker=dict(
                     size=grp["streak_size"],
                     color=bloc_colors.get(bloc, GREY),
@@ -830,17 +842,27 @@ elif page == "📰 Sentiment":
             except Exception:
                 continue
 
-        return results[:max(12, len(results))]
+        return results[:12]
 
     def parse_date(seendate):
         """Parse either GDELT (YYYYMMDDHHmmss) or RSS (RFC 2822) date strings."""
-        for fmt in ("%Y%m%d%H%M%S", "%Y%m%d",
-                    "%a, %d %b %Y %H:%M:%S %z", "%a, %d %b %Y %H:%M:%S GMT"):
+        if not seendate:
+            return "—"
+        s = seendate.strip()
+        # GDELT compact formats — slice to exact expected length
+        for fmt, length in [("%Y%m%d%H%M%S", 14), ("%Y%m%d", 8)]:
             try:
-                return datetime.strptime(seendate[:len(fmt)], fmt).strftime("%b %d, %Y")
+                return datetime.strptime(s[:length], fmt).strftime("%b %d, %Y")
             except Exception:
                 continue
-        return seendate[:10] if seendate else "—"
+        # RSS / RFC-2822 formats — parse full string (length varies)
+        for fmt in ("%a, %d %b %Y %H:%M:%S %z", "%a, %d %b %Y %H:%M:%S GMT",
+                    "%d %b %Y %H:%M:%S %z", "%Y-%m-%dT%H:%M:%S%z"):
+            try:
+                return datetime.strptime(s, fmt).strftime("%b %d, %Y")
+            except Exception:
+                continue
+        return s[:10]  # fallback: return first 10 chars as-is
 
     def render_article(art):
         """Render one article card and return scored dict."""
@@ -939,7 +961,7 @@ elif page == "📰 Sentiment":
         fig_sent.update_layout(
             **dark_layout(height=300, t=20, b=30, legend_h=False),
             yaxis_title="Article Count",
-            yaxis=dict(range=[0, max(bullish, neutral, bearish) * 1.3]),
+            yaxis=dict(range=[0, max(max(bullish, neutral, bearish), 1) * 1.4]),
         )
         st.plotly_chart(fig_sent, use_container_width=True)
         # Dynamic signal callout based on live article data
