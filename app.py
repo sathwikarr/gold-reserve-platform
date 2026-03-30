@@ -1151,8 +1151,16 @@ elif page == "🤖 ML Predictions":
         **dark_layout(height=430, t=30, b=50),
         title=f"Top 10 Countries Predicted to Increase Gold Reserves in {predict_year}",
         xaxis_title="Gold Accumulation Score (0–100)",
-        xaxis=dict(range=[0, 120]),
+        xaxis=dict(range=[0, 125]),
         yaxis=dict(autorange="reversed"),
+        legend=dict(
+            orientation="v",
+            x=1.01, y=0.5,
+            xanchor="left", yanchor="middle",
+            bgcolor="rgba(0,0,0,0)",
+            bordercolor="rgba(255,255,255,0.15)",
+            borderwidth=1,
+        ),
     )
     st.plotly_chart(fig_ml, use_container_width=True)
 
