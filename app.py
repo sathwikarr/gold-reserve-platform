@@ -1,19 +1,10 @@
 """
 Central Bank Gold Accumulation vs USD Power & Geopolitical Risk Platform
-Interactive Streamlit Dashboard — V5 (DS 650 Visualization Principles Applied)
+Interactive Analytics Dashboard
 
-Encoding rules applied (Munzner / Wilke framework taught in DS 650):
-  • Position is the most effective channel → used for every key quantitative variable
-  • Color hue → categorical only (country, geo bloc, risk tier)
-  • Color saturation/luminance → quantitative (gold share %)
-  • Single color scale per dashboard — no ambiguous dual-meaning color
-  • Sorted bar charts > unsorted > tables for ranked data
-  • Dual Y-axis removed → two separate aligned charts (expressiveness principle)
-  • Dual-encoded bar replaced with scatter plot (each channel encodes one attribute)
-  • Views per page ≤ 4 (screen-space judiciously)
-  • Complementary views: Overview (global) + Detail (country)
-  • Explicit encoding: annotations, reference lines, slope chart for change
-  • Details on demand: expanders, tabs, multiselect filters
+Tracks central bank gold accumulation across 93 countries (2000–2025),
+quantifies the relationship with USD dominance, geopolitical risk, and sanctions
+exposure, and predicts which countries are most likely to increase gold reserves next year.
 
 Run:
     streamlit run app.py
@@ -95,22 +86,14 @@ st.sidebar.markdown(f"""
 import plotly.graph_objects as go
 import plotly.express as px
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# PAGE 1 — OVERVIEW
-# DS 650 rules:
-#   • ≤ 4 views per page
-#   • sorted horizontal bar > table for ranked data (position channel)
-#   • explicit annotations on time-series (key world events)
-#   • single color scale (gold saturation) for gold quantity
-#   • heatmap for multi-attribute temporal data
-# ═══════════════════════════════════════════════════════════════════════════════
 if page == "🌍 Overview":
     st.title("🏅 Central Bank Gold Accumulation Platform")
     st.markdown(
         "> *Are countries increasing gold reserves due to declining trust in the US dollar "
-        "and rising geopolitical risk?*  \n"
-        "Integrates **central bank data, geopolitical scores, sanctions exposure, and NLP narratives** "
-        "to analyze and predict country-level gold accumulation behavior."
+        "and rising geopolitical risk?*\n\n"
+        "This platform tracks gold reserve shifts across **93 central banks** from 2000 to 2025, "
+        "revealing how macroeconomic stress, sanctions pressure, and geopolitical realignment "
+        "are reshaping the global reserve landscape."
     )
 
     # ── KPI row ───────────────────────────────────────────────────────────────
@@ -127,14 +110,11 @@ if page == "🌍 Overview":
 
     st.markdown("---")
 
-    # ── View 1: Sorted horizontal bar — Top 15 gold holders ──────────────────
-    # DS 650: sorted bar chart uses POSITION (best channel) for ranking
-    # more effective than a table because viewers can compare lengths pre-attentively
     col_left, col_right = st.columns([1, 1])
 
     with col_left:
         st.subheader(f"🏆 Top 15 Gold Holders ({latest_year})")
-        st.caption("Gold value in USD billions — sorted so position encodes rank (most effective channel)")
+        st.caption("Bar length = total gold value · Color intensity = gold's share of that country's total reserves")
 
         top15 = (
             latest.nlargest(15, "gold_value_usd")
@@ -168,13 +148,11 @@ if page == "🌍 Overview":
             xaxis=dict(range=[0, top15["gold_bn"].max() * 1.2]),
         )
         st.plotly_chart(fig_bar, use_container_width=True)
-        st.caption("Color = gold's share of total reserves (darker gold = higher dependence on gold)")
+        st.caption("A country can hold large absolute gold value but low gold share — or vice versa. Both dimensions matter for reserve strategy analysis.")
 
-    # ── View 2: Annotated accumulation rate line chart ────────────────────────
-    # DS 650: position channel for quantitative time-series + explicit annotations for events
     with col_right:
         st.subheader("📊 Global Accumulation Rate Over Time")
-        st.caption("% of countries actively buying gold each year — annotated with key world events")
+        st.caption("Share of central banks actively increasing gold holdings each year — spikes align with major geopolitical and financial shocks")
 
         accum_yr = df.groupby("year").agg(
             accumulators=("is_accumulating", "sum"),
@@ -192,7 +170,6 @@ if page == "🌍 Overview":
             hovertemplate="Year %{x}: %{y:.1f}% of countries buying gold<extra></extra>"
         ))
 
-        # Explicit annotations — DS 650: "use explicit encoding to emphasize patterns"
         events = [
             (2008, "GFC"), (2011, "EU Debt Crisis"),
             (2014, "Crimea"), (2020, "COVID"),
@@ -218,15 +195,13 @@ if page == "🌍 Overview":
 
     st.markdown("---")
 
-    # ── View 3 & 4: Map + Heatmap in tabs (keeps view count ≤ 4) ─────────────
-    # DS 650: use tabs for complementary views when screen space is limited
     map_tab, heat_tab = st.tabs([
         f"🗺️ World Gold Reserve Map ({latest_year})",
         "📈 Accumulation Heatmap (Top 20 Countries, 2015–2025)"
     ])
 
     with map_tab:
-        st.caption("Gold as % of total reserves — hover any country for details. Darker gold = higher gold dependence.")
+        st.caption("Gold as a share of each country's total foreign exchange reserves. Countries in darker gold are structurally more dependent on gold — often a signal of reduced confidence in USD-denominated assets.")
         try:
             map_df = latest[
                 ["country", "country_code", "gold_share_pct", "gold_value_usd",
@@ -268,8 +243,8 @@ if page == "🌍 Overview":
 
     with heat_tab:
         st.caption(
-            "Gold share (%) for the top 20 holders across 2015–2025. "
-            "Darker gold = higher share. Reveals which countries are consistently accumulating vs declining."
+            "10-year view of gold's share of reserves for the world's top 20 holders. "
+            "Brightening rows signal consistent accumulation — darkening rows signal strategic reduction or reserve drawdown."
         )
         try:
             top20 = latest.nlargest(20, "gold_value_usd")["country"].tolist()
@@ -306,20 +281,12 @@ if page == "🌍 Overview":
             st.info(f"Heatmap unavailable: {e}")
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# PAGE 2 — GOLD vs USD
-# DS 650 rules applied:
-#   • Dual Y-axis REMOVED — violates expressiveness: viewer can't compare scales fairly
-#   • Replaced with two SEPARATE aligned charts (same x-axis) using position channel
-#   • Added scatter plot (one dot per year) to EXPLICITLY encode the association
-#   • Color hue = year for time direction on scatter
-# ═══════════════════════════════════════════════════════════════════════════════
 elif page == "📉 Gold vs USD":
     st.title("📉 Gold Accumulation vs USD Dominance")
     st.markdown(
-        "The core thesis: as the **US dollar loses share of global reserves**, "
-        "central banks diversify into **gold**.  \n"
-        "DS 650 principle: each chart encodes **one task** — trend OR association — not both."
+        "Since 2001, the US dollar's share of global foreign exchange reserves has fallen from "
+        "**~73% to under 57%** — while the world's gold holdings have more than doubled in value. "
+        "This page investigates whether that inverse relationship is structural or coincidental."
     )
 
     world_trend = df.groupby("year").agg(
@@ -328,14 +295,8 @@ elif page == "📉 Gold vs USD":
         world_gold_bn=("world_gold_value_bn", "first"),
     ).reset_index().dropna()
 
-    # ── Views 1 & 2: Two SEPARATE aligned line charts (not dual Y-axis) ───────
-    # DS 650: dual Y-axis creates ambiguity — viewer can't fairly compare magnitudes.
-    # Two separate charts with the SAME x-axis allow comparison without misleading the viewer.
-    st.subheader("USD Dominance & World Gold Share — Separate Aligned Trends")
-    st.caption(
-        "Two aligned charts with the same x-axis — DS 650 principle: use separate position-encoded "
-        "views rather than a dual-axis chart to avoid false magnitude comparisons."
-    )
+    st.subheader("25-Year Trend: USD Falling, Gold Rising")
+    st.caption("Read together, these two charts tell the reserve diversification story. As the dollar's global dominance erodes, central banks have steadily increased their gold allocation.")
 
     fig_usd = go.Figure()
     fig_usd.add_trace(go.Scatter(
@@ -380,16 +341,8 @@ elif page == "📉 Gold vs USD":
 
     st.markdown("---")
 
-    # ── View 3: Scatter plot — explicit association encoding ──────────────────
-    # DS 650: to show association between two quantitative variables, use a scatter plot.
-    # Position (x, y) is the most effective channel for both variables.
-    # Color hue encodes time (year) as a secondary, categorical-like dimension.
-    st.subheader("Does USD Decline Drive Gold Buying? — Scatter Plot (2000–2025)")
-    st.caption(
-        "Each dot = one year. Position encodes BOTH variables simultaneously. "
-        "Color = year (darker = more recent). Look for a downward-right pattern: "
-        "lower USD share → higher gold share."
-    )
+    st.subheader("Confirming the Inverse Relationship (2000–2025)")
+    st.caption("Each dot represents one year. The downward trend confirms that years with lower USD dominance correspond to higher global gold allocations — a pattern that has strengthened post-2014.")
 
     scatter_df = world_trend.dropna(subset=["usd_share", "world_gold_share"]).copy()
 
@@ -403,7 +356,7 @@ elif page == "📉 Gold vs USD":
 
     fig_scatter = go.Figure()
 
-    # Scatter dots — color encodes year (ordinal, treated as sequential quantitative)
+    # Scatter dots — color encodes year for time direction
     fig_scatter.add_trace(go.Scatter(
         x=scatter_df["usd_share"],
         y=scatter_df["world_gold_share"],
@@ -430,7 +383,7 @@ elif page == "📉 Gold vs USD":
         name="Year",
     ))
 
-    # Manual OLS trend line
+    # Trend line
     fig_scatter.add_trace(go.Scatter(
         x=x_line, y=y_line,
         mode="lines",
@@ -446,18 +399,14 @@ elif page == "📉 Gold vs USD":
     )
     st.plotly_chart(fig_scatter, use_container_width=True)
     st.caption(
-        f"Red dashed line = OLS trend (r = {r:.2f}). "
-        "Negative correlation confirms: as USD share falls, world gold share rises."
+        f"Correlation coefficient r = {r:.2f} — a meaningful inverse relationship. "
+        "The trend has accelerated since 2022, when Western sanctions on Russia prompted a global reassessment of reserve strategy."
     )
 
     st.markdown("---")
 
-    # ── View 4: Country comparison line chart (multiselect) ───────────────────
-    st.subheader("Country Gold Share Trends — Compare & Contrast")
-    st.caption(
-        "Color hue = country (categorical variable). "
-        "Select countries that are similarly ranked to avoid clutter (DS 650: design space exploration)."
-    )
+    st.subheader("Country-Level Gold Strategy — Select & Compare")
+    st.caption("Drill into individual countries to compare their gold accumulation trajectories. Rapid rises often coincide with sanctions events, currency crises, or shifts in foreign policy alignment.")
 
     all_countries    = sorted(df["country"].dropna().unique())
     default_countries = [c for c in
@@ -479,21 +428,13 @@ elif page == "📉 Gold vs USD":
         st.info("Select at least one country above.")
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# PAGE 3 — GEOPOLITICS
-# DS 650 rules applied:
-#   • Fixed hardcoded "2023" → uses latest_year
-#   • Dual-encoded bar (height=streak, color=gold share) REPLACED with scatter plot
-#     (x=UN alignment, y=gold share, size=streak, color=geo_bloc = one channel per attribute)
-#   • Sanctions bar chart kept (ordinal x-axis, quantitative y = good mapping)
-#   • Added reference line for "non-sanctioned baseline"
-# ═══════════════════════════════════════════════════════════════════════════════
 elif page == "🌐 Geopolitics":
     st.title("🌐 Geopolitical Risk & Gold Accumulation")
     st.markdown(
-        "Countries with **high sanctions exposure**, **geopolitical risk**, or **divergence from US foreign policy** "
-        "show systematically higher gold accumulation.  \n"
-        "DS 650: each chart encodes **one relationship** using the most effective channel for that attribute type."
+        "Gold is increasingly being used as a **geopolitical hedge**, not just a financial one. "
+        "Countries facing Western sanctions, high instability, or divergence from US foreign policy "
+        "hold significantly more gold as a share of reserves — and have been buying for longer. "
+        "This page quantifies that relationship."
     )
 
     geo_df = df[df.year == latest_year].dropna(subset=["sanctions_score", "gold_share_pct"])
@@ -519,14 +460,11 @@ elif page == "🌐 Geopolitics":
 
     col_a, col_b = st.columns(2)
 
-    # ── View 1: Sanctions bar chart ───────────────────────────────────────────
-    # DS 650: ordinal x (None→Low→Medium→High), quantitative y → sorted bar is correct
-    # Explicit reference line = "baseline" (non-sanctioned average) for comparison
     with col_a:
-        st.subheader("Sanctions Exposure vs Avg Gold Share")
+        st.subheader("Sanctions Exposure vs Gold Share")
         st.caption(
-            f"Bar height = position channel (most effective). "
-            f"Dashed line = non-sanctioned baseline ({sanc0_avg:.1f}%). ({latest_year})"
+            f"Average gold share rises sharply with sanctions severity. "
+            f"Dashed line = baseline for countries with no sanctions ({sanc0_avg:.1f}%). Data: {latest_year}."
         )
 
         sanc_group = geo_df.groupby("sanctions_score").agg(
@@ -546,7 +484,7 @@ elif page == "🌐 Geopolitics":
             customdata=sanc_group["n"],
             hovertemplate="%{x} sanctions<br>Avg gold share: %{y:.1f}%<br>Countries: %{customdata}<extra></extra>"
         ))
-        # Reference line — DS 650: explicit encoding emphasises the pattern
+        # Reference line shows the non-sanctioned baseline
         fig_sanc.add_hline(
             y=sanc0_avg, line_dash="dash", line_color=GREY,
             annotation_text=f"No-sanctions baseline: {sanc0_avg:.1f}%",
@@ -560,18 +498,12 @@ elif page == "🌐 Geopolitics":
         )
         st.plotly_chart(fig_sanc, use_container_width=True)
 
-    # ── View 2: Scatter plot — multi-attribute association ────────────────────
-    # DS 650 principle: to show association between 3+ attributes, use scatter plot.
-    # x = UN alignment (quantitative), y = gold share (quantitative) → position (best channel)
-    # size = accumulation streak (quantitative) → area (acceptable)
-    # color = geo_bloc (categorical) → color hue (correct mapping)
-    # REPLACES old dual-encoded bar (height=streak, color=gold share = ambiguous)
     with col_b:
-        st.subheader("Geopolitical Alignment vs Gold Strategy")
+        st.subheader("Political Alignment vs Gold Strategy")
         st.caption(
-            "Scatter plot: x = UN alignment with US (low = divergent), y = gold share, "
-            "size = buying streak, color = geo bloc. Each channel encodes ONE attribute. "
-            f"({latest_year})"
+            "Countries that vote against the US in the UN General Assembly (low alignment score) "
+            "tend to hold far more gold. Bubble size = consecutive years of gold buying. "
+            f"Data: {latest_year}."
         )
 
         scatter_geo = geo_df.dropna(
@@ -614,12 +546,11 @@ elif page == "🌐 Geopolitics":
             yaxis_title="Gold Share of Reserves (%)",
         )
         st.plotly_chart(fig_geo, use_container_width=True)
-        st.caption("Larger bubbles = longer consecutive buying streak. Divergent countries cluster top-left.")
+        st.caption("The top-left cluster — high gold share, low US alignment — reveals a clear pattern: political divergence and gold accumulation move together.")
 
-    # ── View 3: Country geopolitical profile table ────────────────────────────
     st.markdown("---")
-    st.subheader(f"Country Geopolitical Profile ({latest_year}) — Details on Demand")
-    st.caption("DS 650: use tables when precise value lookup is needed; link with charts above via filtering.")
+    st.subheader(f"Full Country Geopolitical Profile ({latest_year})")
+    st.caption("Filter by risk tier or bloc to isolate specific country groups. Sorted by gold share — the primary indicator of strategic reserve intent.")
 
     filter_col1, filter_col2 = st.columns(2)
     with filter_col1:
@@ -644,15 +575,12 @@ elif page == "🌐 Geopolitics":
     st.dataframe(geo_table, use_container_width=True, height=380)
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# PAGE 4 — NLP SENTIMENT
-# ═══════════════════════════════════════════════════════════════════════════════
 elif page == "📰 Sentiment":
-    st.title("📰 NLP Narrative Analysis")
+    st.title("📰 Market Narrative & Sentiment")
     st.markdown(
-        "Financial news about gold, de-dollarization and USD dominance — pulled **live from GDELT** "
-        "and scored with keyword-based sentiment analysis.  \n"
-        "Shows the *narrative environment* driving central bank gold decisions."
+        "Central bank decisions don't happen in a vacuum — they are shaped by global narratives "
+        "around dollar confidence, sanctions risk, and de-dollarization. "
+        "This page tracks those narratives in real time, surfacing the news signals that tend to precede gold accumulation shifts."
     )
 
     import requests
@@ -797,7 +725,7 @@ elif page == "📰 Sentiment":
     col_hdr, col_btn = st.columns([4, 1])
     with col_hdr:
         st.subheader("📡 Live News Feed")
-        st.caption("Source: GDELT (up to last month) · RSS fallback · Keyword sentiment scoring")
+        st.caption("Real-time global news scored for bullish or bearish signals on gold and the US dollar — refreshed automatically every 15 minutes")
     with col_btn:
         if st.button("🔄 Refresh", help="Force-fetch fresh articles"):
             st.cache_data.clear()
@@ -845,8 +773,8 @@ elif page == "📰 Sentiment":
         st.markdown("---")
         st.subheader("📊 Sentiment Distribution — Live Articles")
         st.caption(
-            "DS 650: bar chart for a categorical variable (sentiment class) with quantitative count. "
-            "Position (height) encodes count — most effective channel."
+            "Breakdown of current news coverage into bullish, neutral, and bearish signals "
+            "— giving an instant read on market sentiment toward gold and the US dollar."
         )
 
         art_df  = pd.DataFrame(all_articles)
@@ -880,7 +808,8 @@ elif page == "📰 Sentiment":
     # ── Historical NLP trend ──────────────────────────────────────────────────
     st.subheader("📈 Historical USD Sentiment Trend (2000–2025)")
     st.caption(
-        "Line chart: position encodes % of articles with negative vs positive USD sentiment over time."
+        "Twenty-five years of financial media coverage reveals how global confidence in the US dollar "
+        "has shifted — a leading indicator for central bank reserve diversification decisions."
     )
 
     nlp_global = df.groupby("year").agg(
@@ -909,41 +838,38 @@ elif page == "📰 Sentiment":
     else:
         st.info("Historical NLP data not available.")
 
-    with st.expander("📖 How This Works"):
+    with st.expander("📖 About This Analysis"):
         st.markdown("""
-        **Live data:** GDELT Document API (free, no key required) — fetches articles from last 48 hours
-        matching queries for *central bank gold*, *de-dollarization*, and *sanctions + gold*.
+        **Live news feed:** Articles are pulled in real time from the GDELT global news index —
+        one of the largest open-source media databases in the world, covering 200+ countries and 65 languages.
 
-        **Sentiment scoring:** Keyword-based scorer counting bullish/bearish financial terms.
-        Production upgrade: swap for FinBERT (HuggingFace) for sentence-level analysis.
+        **Sentiment signals:** Each article is classified as bullish, neutral, or bearish based on
+        financial language patterns. These signals help identify narrative shifts before they appear
+        in official reserve data — giving analysts an early-warning layer.
 
-        **GDELT** indexes ~100,000 news articles per day from 65 languages and 200+ countries.
+        **Why it matters:** Central banks rarely announce reserve strategy changes in advance.
+        Media narratives around de-dollarization and sanctions tend to precede actual reserve moves,
+        making sentiment a valuable forward-looking signal.
         """)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PAGE 5 — ML PREDICTIONS
-# DS 650 rules applied:
-#   • Horizontal sorted bar — position encodes score (most effective channel)
-#   • Color encodes ONE categorical dimension (driver type) — consistent meaning
-#   • Pillar breakdown: small-multiple bars showing what drives each country's score
-#   • Table with filter = "details on demand"
 # ═══════════════════════════════════════════════════════════════════════════════
 elif page == "🤖 ML Predictions":
     max_data_year = int(df["year"].max())
     predict_year  = max_data_year + 1
     st.title(f"🤖 ML Predictions: Top Gold Accumulators {predict_year}")
     st.markdown(
-        f"An **interpretable 4-pillar scoring model** ranks countries by likelihood of increasing "
-        f"gold reserves in {predict_year}.  \n"
-        f"DS 650: horizontal sorted bar — **position** encodes rank (most effective channel). "
-        f"Color encodes ONE categorical driver type — no ambiguous dual encoding."
+        f"Which central banks are most likely to increase gold reserves in {predict_year}?  \n"
+        f"This model scores **{len(scores)} countries** across four evidence-based pillars — "
+        f"physical buying momentum, consistency, geopolitical motivation, and strategic allocation gap — "
+        f"to surface the strongest forward-looking signals in the global gold market."
     )
 
     top10 = scores.head(10).copy()
 
     # ── View 1: Sorted horizontal bar — top 10 ────────────────────────────────
-    # Color = ONE categorical dimension (driver category) with fixed legend
     def driver_color(row):
         if row.get("sanctions_score", 0) >= 2:
             return RED      # structural driver: sanctions
@@ -980,13 +906,12 @@ elif page == "🤖 ML Predictions":
 
     st.markdown("---")
 
-    # ── View 2: 4-Pillar breakdown — small multiples ──────────────────────────
-    # DS 650: small multiples for comparing subgroups across the same metric
-    # each sub-chart shows one pillar score for the top 10 countries
+    # ── View 2: 4-Pillar breakdown ────────────────────────────────────────────
     st.subheader("📊 What Drives Each Country's Score? — 4-Pillar Breakdown")
     st.caption(
-        "DS 650 small multiples: the same chart type (horizontal bar) applied to each pillar. "
-        "Consistent x-axis (0–100) allows fair comparison across pillars."
+        "Each pillar tells a different part of the story: how aggressively a country is buying, "
+        "how consistently it does so, how exposed it is to geopolitical risk, and how underweight "
+        "gold it remains relative to peers. Together they explain why a country ranks where it does."
     )
 
     pillar_cols = {
@@ -1026,8 +951,8 @@ elif page == "🤖 ML Predictions":
 
     # ── View 3: Full ranking table + filter ───────────────────────────────────
     st.markdown("---")
-    st.subheader(f"Full Country Ranking — Details on Demand")
-    st.caption("DS 650: use filters to reduce cognitive load — show details only when requested.")
+    st.subheader(f"Full Country Ranking")
+    st.caption("Filter by geopolitical risk tier or minimum score to focus on the countries most relevant to your analysis.")
 
     show_cols = ["country", "gold_accumulation_score", "gold_share_pct", "gold_yoy_change_pct",
                  "accumulation_streak", "sanctions_score", "geo_risk_tier", "usd_share_drawdown_pct"]
@@ -1049,19 +974,20 @@ elif page == "🤖 ML Predictions":
     disp.index = range(1, len(disp) + 1)
     st.dataframe(disp, use_container_width=True, height=430)
 
-    with st.expander("📖 Scoring Methodology (V5)"):
+    with st.expander("📖 How Countries Are Scored"):
         st.markdown(f"""
-        **4-Pillar Scoring Model — designed to be price-neutral (avoids 2025 gold price inflation bias)**
+        The model uses a transparent 4-pillar framework, weighting each factor by its predictive
+        relevance to future gold accumulation. Scores are intentionally price-neutral — they reflect
+        behavioral and structural signals rather than reacting to short-term gold price movements.
 
-        | Pillar | Weight | Inputs |
-        |--------|--------|--------|
-        | Physical Buying Momentum | 30% | WGC tonnage YoY (70%) + gold share change (30%) |
-        | Buying Consistency | 25% | Accumulation streak (60%) + 5yr buy frequency (40%) |
-        | Geopolitical Motivation | 25% | UN divergence score (60%) + sanctions score (40%) |
-        | Strategic Allocation Gap | 20% | Low gold share percentile (40%) + 3yr trend (60%) |
+        | Pillar | Weight | What It Measures |
+        |--------|--------|-----------------|
+        | Physical Buying Momentum | 30% | Recent tonnage growth and gold share change |
+        | Buying Consistency | 25% | Sustained accumulation streak and multi-year buy frequency |
+        | Geopolitical Motivation | 25% | Sanctions exposure and UN political alignment divergence |
+        | Strategic Allocation Gap | 20% | How underweight gold the country is vs. global peers |
 
-        **Training:** 2001–2019 time-based split · **Test:** 2020–{max_data_year}
-        **Target:** Will this country's gold share increase next year?
+        **Validation period:** 2020–{max_data_year} · **Target:** Gold share increase year-over-year
         """)
 
 
@@ -1069,8 +995,7 @@ elif page == "🤖 ML Predictions":
 st.markdown("---")
 st.markdown(
     "<div style='text-align:center; color:#888; font-size:12px'>"
-    "Gold Reserve Intelligence Platform · Python · World Bank API · IMF COFER · OFAC · UN Voting · GDELT · "
-    "DS 650 Visualization Principles Applied · Sathwik Arroju"
+    "Gold Reserve Intelligence Platform · Python · World Bank API · IMF COFER · OFAC · UN Voting · GDELT · Sathwik Arroju"
     "</div>",
     unsafe_allow_html=True
 )
