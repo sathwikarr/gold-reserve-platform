@@ -168,8 +168,8 @@ if page == "🌍 Overview":
                      oceancolor="#0D1117"),
             paper_bgcolor="#0D1117", font=dict(color="white"),
             height=480, margin=dict(t=40, b=10, l=10, r=10),
-            coloraxis_colorbar=dict(title="Gold %", tickfont=dict(color="white"),
-                                    titlefont=dict(color="white"))
+            coloraxis_colorbar=dict(title=dict(text="Gold %", font=dict(color="white")),
+                                    tickfont=dict(color="white"))
         )
         st.plotly_chart(fig_map, use_container_width=True)
         st.caption("Darker gold = higher share of reserves held in gold. Hover over any country for details.")
@@ -191,7 +191,7 @@ if page == "🌍 Overview":
             colorscale=[[0,"#1A2332"],[0.4,"#7B5E00"],[1,"#FFD700"]],
             hoverongaps=False,
             hovertemplate="%{y}<br>%{x}: %{z:.1f}%<extra></extra>",
-            colorbar=dict(title="Gold %", tickfont=dict(color="white"), titlefont=dict(color="white"))
+            colorbar=dict(title=dict(text="Gold %", font=dict(color="white")), tickfont=dict(color="white"))
         ))
         fig_heat.update_layout(
             paper_bgcolor="#0D1117", plot_bgcolor="#0D1117",
