@@ -108,6 +108,37 @@ Gradient Boosting achieves 0.86 precision — when it predicts a country will bu
 
 ---
 
+## Keeping Data Current
+
+Run the refresh script to pull the latest data from all automated sources and re-run the full pipeline:
+
+```bash
+python scripts/refresh_data.py
+```
+
+**What it does automatically:**
+
+| Source | Frequency | Method |
+|--------|-----------|--------|
+| World Bank API | Monthly | Auto-fetched (REST API) |
+| IMF COFER | Quarterly | Auto-fetched (API + curated fallback) |
+| UN Votes | Annual | Auto-fetched (Harvard Dataverse) |
+| OFAC Sanctions | As needed | Auto-fetched (US Treasury CSV) |
+| GDELT News | Daily | Auto-fetched (GDELT DOC 2.0 API) |
+| World Gold Council | Monthly | **Manual** — download from [gold.org](https://www.gold.org/goldhub/data/gold-reserves-by-country) |
+
+**Useful flags:**
+
+```bash
+python scripts/refresh_data.py --check          # staleness check only, no fetching
+python scripts/refresh_data.py --no-pipeline    # fetch data but skip pipeline re-run
+python scripts/refresh_data.py --source gdelt   # refresh a single source (wb|cofer|un|ofac|gdelt)
+```
+
+The script tracks last-fetch timestamps in `data/.refresh_meta.json` and warns when any source is stale.
+
+---
+
 ## Tech Stack
 
 ```
