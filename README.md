@@ -6,7 +6,7 @@
 
 An end-to-end analytics and ML platform that tracks central bank gold accumulation, measures USD dominance, quantifies geopolitical risk, and predicts which countries are likely to increase gold reserves next — combining structured macroeconomic data with NLP-derived financial narratives across 182 countries from 2000 to 2025.
 
-**[→ Open Live Dashboard](https://gold-reserve-platform-az4sd962a7cyf3mifjeae8.streamlit.app/)**
+**[→ Open Live Dashboard](https://gold-reserve-platform-az4sd962a7cyf3mifjeae8.streamlit.app/)**  ·  **[→ Case Study (PDF)](docs/case_study.pdf)**
 
 ---
 
