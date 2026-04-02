@@ -420,8 +420,8 @@ if page == "🌍 Overview":
         fig_bar.update_layout(
             **dark_layout(height=430, t=10, b=40, l=10, r=80, legend_h=False),
             xaxis_title="Gold Value (USD Billions)",
-            xaxis=dict(range=[0, top15["gold_bn"].max() * 1.2]),
         )
+        fig_bar.update_xaxes(range=[0, top15["gold_bn"].max() * 1.2])
         st.plotly_chart(fig_bar, use_container_width=True)
         st.caption("A country can hold large absolute gold value but low gold share — or vice versa. Both dimensions matter for reserve strategy analysis.")
         # Dynamic insight
@@ -474,8 +474,8 @@ if page == "🌍 Overview":
             **dark_layout(height=430, t=30, b=40),
             xaxis_title="Year",
             yaxis_title="% of Countries Accumulating Gold",
-            yaxis=dict(range=[0, 105]),
         )
+        fig_line.update_yaxes(range=[0, 105])
         st.plotly_chart(fig_line, use_container_width=True)
         # Dynamic insight from accumulation rate data
         peak_rate_row  = accum_yr.loc[accum_yr["rate"].idxmax()]
@@ -635,8 +635,8 @@ elif page == "📉 Gold vs USD":
     fig_usd.update_layout(
         **dark_layout(height=260, t=30, b=10, legend_h=False),
         yaxis_title="USD Share of Global Reserves (%)",
-        xaxis=dict(showticklabels=False),  # shared x — hide labels on top chart
     )
+    fig_usd.update_xaxes(showticklabels=False)  # shared x — hide labels on top chart
 
     fig_gold_share = go.Figure()
     fig_gold_share.add_trace(go.Scatter(
@@ -851,8 +851,8 @@ elif page == "🌐 Geopolitics":
             **dark_layout(height=370, t=30, b=40, legend_h=False),
             xaxis_title="Sanctions Level",
             yaxis_title="Avg Gold Share (%)",
-            yaxis=dict(range=[0, sanc_group["avg_gold"].max() * 1.35])
         )
+        fig_sanc.update_yaxes(range=[0, sanc_group["avg_gold"].max() * 1.35])
         st.plotly_chart(fig_sanc, use_container_width=True)
         multiplier = f"{sanc2_avg / sanc0_avg:.1f}×" if sanc0_avg > 0 else "significantly higher"
         st.info(
@@ -1275,8 +1275,8 @@ elif page == "📰 Sentiment":
         fig_sent.update_layout(
             **dark_layout(height=300, t=20, b=30, legend_h=False),
             yaxis_title="Article Count",
-            yaxis=dict(range=[0, max(max(bullish, neutral, bearish), 1) * 1.4]),
         )
+        fig_sent.update_yaxes(range=[0, max(max(bullish, neutral, bearish), 1) * 1.4])
         st.plotly_chart(fig_sent, use_container_width=True)
         # Dynamic signal callout based on live article data
         if bullish > bearish and bullish > neutral:
@@ -1419,8 +1419,6 @@ elif page == "🤖 ML Predictions":
         **dark_layout(height=430, t=30, b=50, legend_h=False),
         title=f"Top 10 Countries Predicted to Increase Gold Reserves in {predict_year}",
         xaxis_title="Gold Accumulation Score (0–100)",
-        xaxis=dict(range=[0, 125]),
-        yaxis=dict(autorange="reversed"),
         legend=dict(
             orientation="v",
             x=1.01, y=0.5,
@@ -1430,6 +1428,8 @@ elif page == "🤖 ML Predictions":
             borderwidth=1,
         ),
     )
+    fig_ml.update_xaxes(range=[0, 125])
+    fig_ml.update_yaxes(autorange="reversed")
     st.plotly_chart(fig_ml, use_container_width=True)
 
     # ── Key Insight callout — dynamic, drawn from live data ───────────────────
@@ -1504,8 +1504,8 @@ elif page == "🤖 ML Predictions":
                 fig_p.update_layout(
                     **dark_layout(height=250, t=10, b=30, l=5, r=40, legend_h=False),
                     title=dict(text=pillar_name.split(":")[1].strip(), font=dict(size=11)),
-                    xaxis=dict(range=[0, 110], title="Score"),
                 )
+                fig_p.update_xaxes(range=[0, 110], title="Score")
                 st.plotly_chart(fig_p, use_container_width=True)
                 # Per-pillar description below each chart
                 pinfo = PILLAR_DESCRIPTIONS.get(pillar_col)
