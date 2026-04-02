@@ -1,8 +1,14 @@
 # Central Bank Gold Accumulation vs USD Power & Geopolitical Risk Platform
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://gold-reserve-platform-az4sd962a7cyf3mifjeae8.streamlit.app/)
+[![Python](https://img.shields.io/badge/Python-3.10-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
+
 > Are countries increasing gold reserves due to declining trust in the US dollar and rising geopolitical risk?
 
 An end-to-end analytics and ML platform integrating central bank gold reserves, global USD dominance metrics, sanctions exposure, and NLP-derived financial narratives to analyze and predict country-level gold accumulation behavior.
+
+**[→ Open Live Dashboard](https://gold-reserve-platform-az4sd962a7cyf3mifjeae8.streamlit.app/)**
 
 ---
 
