@@ -1,30 +1,61 @@
-# Virtual environment
+# ── Virtual environments ──────────────────────────────────────────────────────
 .venv/
+venv/
+env/
 
-# Environment variables
+# ── Environment variables ─────────────────────────────────────────────────────
 .env
+.env.*
+!.env.example
 
-# Python cache
+# ── Python cache ──────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
+*.pyo
+*.pyd
 *.egg-info/
+dist/
+build/
+*.egg
 
-# Jupyter
+# ── Jupyter ───────────────────────────────────────────────────────────────────
 .ipynb_checkpoints/
 
-# Data — raw and staging stay local (large/sensitive files)
+# ── Data — raw and staging stay local (large / sensitive files) ──────────────
 data/raw/*
 data/staging/*
 !data/raw/.gitkeep
 !data/staging/.gitkeep
 
 # Curated data IS committed — Streamlit Cloud needs it to run the app
-# !data/curated/*  ← intentionally NOT ignored
 
-# macOS
+# ── Working notes and report drafts (not part of the project) ─────────────────
+*.docx
+*.xlsx.bak
+*.twb
+*.twbx
+
+# ── macOS ─────────────────────────────────────────────────────────────────────
 .DS_Store
+.AppleDouble
+.LSOverride
 
-# VS Code
+# ── Windows ───────────────────────────────────────────────────────────────────
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ── IDEs ──────────────────────────────────────────────────────────────────────
 .vscode/
+.idea/
+*.swp
+*.swo
 .virtual_documents/
 anaconda_projects/
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+.dockerignore
